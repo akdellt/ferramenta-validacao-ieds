@@ -17,16 +17,13 @@ class ParametroAtual(BaseModel):
 # DADOS FIXOS A SEREM EXTRAÍDOS DA OA
 class ArquivoOA(BaseModel):
     nome_arquivo: str
-    tamanho: int
     subestacao: str
-    rele_marca: str
-    modelo: str
+    rele_tipo: str
     parametros: list[ParametroReferencia]
     
 # DADOS FIXOS A SEREM EXTRAÍDOS DO ARQUIVO DO IED
 class ArquivoIED(BaseModel):
     nome_arquivo: str
-    tamanho: int
     rele_tipo: str
     parametros: list[ParametroAtual] 
 
