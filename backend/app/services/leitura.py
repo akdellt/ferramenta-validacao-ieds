@@ -1,35 +1,63 @@
-from app.schemas import *
-
+from app.schemas import ArquivoIED, ArquivoOA, ParametroAtual, ParametroReferencia
 import re
 from openpyxl import load_workbook
 from io import BytesIO
 
 # FORMATAÇÃO DOS NOMES DOS IEDS (MARCA MODELO)
+PALAVRAS_PROIBIDAS: set[str] = {"RELE", "RELES", "RELAY", "DO", "DA", "DE", "TYPE", "MODELO"}
+
+TERMOS_PROIBIDOS_OA: set[str] = {
+    "ORDEM DE AJUSTE",
+    "DADOS DA INSTALAÇÃO",
+    "DATA DE EMISSÃO",
+    "DATA DE VENCIMENTO",
+    "RELE",
+    "TRAFO MARCA",
+    "EQUIPAMENTO",
+    "SUBESTAÇÃO:",
+    "CONTROLE DE TAP E TEMPERATURA",
+}
+
+PADRAO_PARAMETRO_IED = re.compile(r'([A-Za-z0-9]+),"([^"]*)"')
+
+CHAVES_IGNORADAS_IED: set[str] = {"RELAYTYPE", "BFID", "PARTNO", "RID", "TID", "INFO", "DID"}
+
+MAX_TAMANHO_XLSX_BYTES: int = 10 * 1024 * 1024
+
 def formatar_nome(nome: str) -> str:
     if not nome:
         return "NÃO IDENTIFICADO"
-    
-    nome_limpo = str(nome).strip().upper()
 
-    nome_limpo = nome_limpo.replace("-", " ").replace("_", " ").replace('"', '').replace("'", "")
-    
-    palavras_proibidas = ["RELE", "RELES", "RELAY", "DO", "DA", "DE", "TYPE", "MODELO"]
+    nome_limpo = (
+        str(nome)
+        .strip()
+        .upper()
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace('"', "")
+        .replace("'", "")
+    )
 
-    palavras_originais = nome_limpo.split()
+    palavras_uteis = [p for p in nome_limpo.split() if p not in PALAVRAS_PROIBIDAS]
 
-    palavras_uteis = [p for p in palavras_originais if p not in palavras_proibidas]
+    if not palavras_uteis:
+        return "NÃO IDENTIFICADO"
 
-    
-    if len(palavras_uteis) >= 2:
-        nome_limpo = f"{palavras_uteis[0]} {palavras_uteis[1]}"
-    elif len(palavras_uteis) == 1:
-        nome_limpo = palavras_uteis[0]
-    else:
-        nome_limpo = " ".join(palavras_uteis)
-    
-    return nome_limpo
+    # Retorna no máximo marca + modelo (duas palavras)
+    return " ".join(palavras_uteis[:2])
 
 # EXTRAÇÃO DOS PARÂMETROS DA ORDEM DE AJUSTE
+def linha_metadados(valor_param: str | None, texto_linha: str) -> bool:
+    if valor_param:
+        param_upper = valor_param.upper()
+        if any(termo in param_upper for termo in TERMOS_PROIBIDOS_OA):
+            return True
+
+    if "DATA DE EMISSÃO" in texto_linha or "DADOS DA INSTALAÇÃO" in texto_linha:
+        return True
+
+    return False
+
 def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
     lista_parametros = []
     grupo_atual = "GENERAL SETTINGS"
@@ -59,7 +87,8 @@ def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
         if col_param is not None and col_ajuste is not None:
             linha_inicio_dados = i
             break
-
+    
+    # resolver esse print aqui
     if col_param is None or col_ajuste is None:
         print("Não foi possível localizar coluna 'PARAMETRO' ou 'AJUSTE' no arquivo")
         return []
@@ -85,30 +114,7 @@ def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
         raw_param = linha[col_param] if len(linha) > col_param else None
         valor_param = str(raw_param).strip() if raw_param else None
 
-        # TODO: ver se é possível melhor exclusão dos cabeçalhos
-        termos_proibidos = [
-            "ORDEM DE AJUSTE", 
-            "DADOS DA INSTALAÇÃO", 
-            "DATA DE EMISSÃO", 
-            "DATA DE VENCIMENTO",
-            "RELE",           
-            "TRAFO MARCA",
-            "EQUIPAMENTO",
-            "SUBESTAÇÃO:"
-        ]
-        
-        eh_lixo = False
-        if valor_param:
-            param_upper = valor_param.upper()
-            for termo in termos_proibidos:
-                if termo in param_upper:
-                    eh_lixo = True
-                    break
-        
-        if "DATA DE EMISSÃO" in texto_linha_completa or "DADOS DA INSTALAÇÃO" in texto_linha_completa:
-            eh_lixo = True
-
-        if eh_lixo:
+        if linha_metadados(valor_param, texto_linha_completa):
             continue
 
         raw_ajuste = linha[col_ajuste] if len(linha) > col_ajuste else None
@@ -140,27 +146,35 @@ def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
                 continue
 
             desc = ""
-            if col_desc is not None and len(linha) > col_desc and linha[col_desc]:
+            if col_desc is not None and len(linha) > col_desc and linha[col_desc] is not None:
                 desc = str(linha[col_desc]).strip()
             
             faixa = ""
-            if col_faixa is not None and len(linha) > col_faixa and linha[col_faixa]:
+            if col_faixa is not None and len(linha) > col_faixa and linha[col_faixa] is not None:
                 faixa = str(linha[col_faixa]).strip()
 
-            dados_parametro = ParametroReferencia(
-                grupo=grupo_atual,
-                parametro=valor_param,
-                descricao=desc,
-                faixa_ajuste=faixa,
-                ajuste_referencia=valor_ajuste
+            lista_parametros.append(
+                ParametroReferencia(
+                    grupo=grupo_atual,
+                    parametro=valor_param,
+                    descricao=desc,
+                    faixa_ajuste=faixa,
+                    ajuste_referencia=valor_ajuste,
+                )
             )
-            lista_parametros.append(dados_parametro)
     return lista_parametros
 
 # LEITURA E EXTRAÇÃO DO ARQUIVO DA ORDEM DE AJUSTE
 def leitura_oa(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoOA:
-    lista_parametros=[]
-
+    if not conteudo_arquivo:
+        raise ValueError("Arquivo da OA vazio.")
+    
+    if len(conteudo_arquivo) > MAX_TAMANHO_XLSX_BYTES:
+        raise ValueError(
+            f"Arquivo OA excede o tamanho máximo permitido "
+            f"({MAX_TAMANHO_XLSX_BYTES / 1024 / 1024:.0f} MB)."
+        )
+    
     arquivo = load_workbook(filename=BytesIO(conteudo_arquivo), data_only=True)
     ordem_ajuste = arquivo.worksheets[0]
 
@@ -185,38 +199,30 @@ def leitura_oa(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoOA:
 def leitura_parametros_ied(texto: str) -> list[ParametroAtual]:
     lista_parametros = []
 
-    padrao_dados = r'([A-Z0-9]+),"([^"]*)"'
-
-    dados_arquivo = re.findall(padrao_dados, texto)
-
-    # TODO: ver se é possível melhorar exclusão de parâmetros irrelevantes do txt
-    chaves_ignoradas = [
-        "FID", "BFID", "PARTNO", "RID", "TID", "[1]", "INFO", "DID"
-    ]
-
-    for chave, valor in dados_arquivo:
-        if chave in chaves_ignoradas:
+    for chave, valor in PADRAO_PARAMETRO_IED.findall(texto):
+        if chave in CHAVES_IGNORADAS_IED:
             continue
         
         # REMOVER COMENTÁRIOS
         if "#" in valor:
             valor = valor.split("#")[0]
-        
-        valor_limpo = valor.strip()
 
         lista_parametros.append(ParametroAtual(
             parametro=chave,
-            valor_atual=valor_limpo
+            valor_atual=valor.strip()
         ))
 
     return lista_parametros
 
 # LEITURA E EXTRAÇÃO DO ARQUIVO DA IED
 def leitura_ied(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoIED:
+    if not conteudo_arquivo:
+        raise ValueError("Arquivo IED vazio")
+
     texto = conteudo_arquivo.decode("utf-8", errors="ignore")
     
     rele_tipo = "NÃO IDENTIFICADO"
-    match_rele = re.search(r"RELAYTYPE=([^\s]+)", texto)
+    match_rele = re.search(r"FID=([^\s]+)", texto)
     if match_rele:
         rele_tipo = formatar_nome(match_rele.group(1))
 

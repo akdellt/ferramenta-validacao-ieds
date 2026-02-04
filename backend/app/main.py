@@ -6,7 +6,6 @@ app = FastAPI(
     title="Ferramenta de Validação de Parâmetros"
 )
 
-# CONFIGURAÇÃO PRÉVIA PARA ETAPA DO FRONTEND
 origins = [
     "http://localhost:5173"
 ]

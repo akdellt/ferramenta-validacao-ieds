@@ -1,12 +1,20 @@
+from typing import Optional
+from enum import Enum
 from pydantic import BaseModel
+
+class StatusParametro(str, Enum):
+    CONFORME = "Conforme"
+    DIVERGENTE = "Divergente"
+    NAO_ENCONTRADO = "Não encontrado"
+    NAO_APLICAVEL = "Não aplicável"
 
 # CADA OA SO TEM UM IED
 # DADOS DIVERSOS A SEREM EXTRAÍDOS DA ORDEM DE AJUSTE
 class ParametroReferencia(BaseModel):
     grupo: str
     parametro: str
-    descricao: str
-    faixa_ajuste: str
+    descricao: Optional[str] = ""
+    faixa_ajuste: Optional[str] = ""
     ajuste_referencia: str
 
 # DADOS DIVERSOS A SEREM EXTRAÍDOS DO ARQUIVO DO IED
@@ -30,12 +38,11 @@ class ArquivoIED(BaseModel):
 # DADOS RELEVANTES DE CADA PARÂMETRO DA IED ANALISADO
 class IEDItem(ParametroReferencia):
     valor_atual: str
-    status: str
+    status: StatusParametro
 
 # TODOS OS RESULTADOS/LINHAS PÓS VALIDAÇÃO DO RELÉ ESPECÍFICO
 class ResultadoValidacao(BaseModel):
     rele_tipo: str
-    status_geral: str
     lista_parametros: list[IEDItem]
 
 # TODOS OS RESULTADOS DE TODOS OS RELÉS

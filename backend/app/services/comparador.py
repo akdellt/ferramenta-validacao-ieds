@@ -1,10 +1,12 @@
 from app.schemas import *
 
+VALORES_NAO_APLICAVEL: set[str] = {"-", "—", "N/A", "NA", "S/A"}
+
+def nao_aplicavel(valor: str) -> bool:
+    return valor.strip() in VALORES_NAO_APLICAVEL
+
 # FUNÇÃO AUXILIAR PARA IDENTIFICAR VALORES NUMÉRICOS
 def comparar_valores(valor_ref: str, valor_lido: str) -> bool:
-    if valor_ref is None or valor_lido is None:
-        return False
-
     s_ref = str(valor_ref).strip().lower()
     s_lido = str(valor_lido).strip().lower()
 
@@ -21,38 +23,50 @@ def comparar_valores(valor_ref: str, valor_lido: str) -> bool:
 
 # VALIDA PARAMETROS ENTRE DOIS ARQUIVOS
 def validar_parametros(oa: ArquivoOA, ied: ArquivoIED) -> ResultadoValidacao:
-    dict_ied = {p.parametro: p for p in ied.parametros}
+    dict_ied = {p.parametro: p.valor_atual for p in ied.parametros}
 
     param_validados = []
 
     # Para cada parâmetro na OA, buscar correspondente no IED
     for param_oa in oa.parametros:
-        param_ied = dict_ied.get(param_oa.parametro)
+        if nao_aplicavel(param_oa.ajuste_referencia):
+            param_validados.append(IEDItem(
+                **param_oa.model_dump(),  
+                valor_atual=dict_ied.get(param_oa.parametro, ""),
+                status=StatusParametro.NAO_APLICAVEL
+            ))
+            continue
 
-        valor_lido = None
-        status="Não encontrado"
+        valor_atual_ied = dict_ied.get(param_oa.parametro)
 
-        if param_ied:
-            valor_lido = param_ied.valor_atual
+        if valor_atual_ied is None:
+            param_validados.append(IEDItem(
+                **param_oa.model_dump(),  
+                valor_atual="",
+                status=StatusParametro.NAO_ENCONTRADO
+            ))
+            continue
 
-            if comparar_valores(param_oa.ajuste_referencia, valor_lido):
-                status = "Conforme"
-            else:
-                status = "Divergente"
-        
-        item = IEDItem(
-            **param_oa.model_dump(),  
-            valor_atual=valor_lido if valor_lido is not None else "NENHUM",
-            status=status
+
+        status = (
+            StatusParametro.CONFORME
+            if comparar_valores(param_oa.ajuste_referencia, valor_atual_ied)
+            else StatusParametro.DIVERGENTE
         )
-        param_validados.append(item)
 
-    divergente = any(i.status != "Conforme" for i in param_validados)
-    status_geral = "Reprovado" if divergente else "Aprovado"
+        param_validados.append(IEDItem(
+            **param_oa.model_dump(),  
+            valor_atual=valor_atual_ied,
+            status=status
+        ))
+
+    tem_problema = any(
+        item.status in (StatusParametro.DIVERGENTE, StatusParametro.NAO_ENCONTRADO)
+        for item in param_validados
+    )
         
     resultado_validacao = ResultadoValidacao(
         rele_tipo=oa.rele_tipo,
-        status_geral=status_geral,
         lista_parametros=param_validados
     )
 
@@ -60,16 +74,14 @@ def validar_parametros(oa: ArquivoOA, ied: ArquivoIED) -> ResultadoValidacao:
 
 # CONFIRMA QUE ARQUIVOS DO PAR SÃO SOBRE MESMO IED
 def validar_ied(par: ParArquivos) -> ResultadoValidacao:
-    rele_tipo_oa = str(par.oa.rele_tipo).strip().lower()
-    rele_tipo_ied = str(par.ied.rele_tipo).strip().lower()
+    rele_oa = str(par.oa.rele_tipo).strip().lower()
+    rele_ied = str(par.ied.rele_tipo).strip().lower()
 
-    match = (rele_tipo_oa in rele_tipo_ied) or (rele_tipo_ied in rele_tipo_oa)
-    if not match:
-        return ResultadoValidacao(
-            rele_tipo=f"{par.oa.rele_tipo} vs {par.ied.rele_tipo}",
-            status_geral="Erro: Modelos Diferentes",
-            lista_parametros=[]
+    if rele_oa not in rele_ied and rele_ied not in rele_oa:
+        raise ValueError(
+            f"Modelos incompatíveis: OA='{par.oa.rele_tipo}' vs IED='{par.ied.rele_tipo}'"
         )
+
     return validar_parametros(par.oa, par.ied)
 
 # VALIDAÇÃO É CHAMADA PARA TODOS OS PARES DE ARQUIVOS
@@ -82,8 +94,7 @@ def processar_arquivos(lote: ConjuntoPares) -> RelatorioValidacoes:
             resultados.append(resultado)
         except Exception as e:
             resultados.append(ResultadoValidacao(
-                rele_tipo="Erro",
-                status_geral=f"Falha no processamento: {str(e)}",
+                rele_tipo=f"{par.oa.rele_tipo} / {par.ied.rele_tipo}",
                 lista_parametros=[]
             ))
 
