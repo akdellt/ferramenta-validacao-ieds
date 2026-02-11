@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { api } from "../services/api";
 import ImportSection, {
   type IedSlotData,
 } from "../features/importacao/components/ImportSection";
-import { api } from "../services/api";
-import { useNavigate } from "react-router-dom";
 import { useValidation } from "../context/ValidationContext";
+import { ErrorBanner } from "../components/common/ErrorBanner";
+import { type BackendError } from "../types";
 
 function ImportPage() {
   const navigate = useNavigate();
@@ -13,30 +16,77 @@ function ImportPage() {
     useValidation();
 
   const [loading, setLoading] = useState(false);
+  const [erroApi, setErroApi] = useState<BackendError | null>(null);
+
+  const handleLocalError = (
+    msg: string,
+    titulo: string = "Arquivo Inválido",
+  ) => {
+    setErroApi({
+      erro: "ValidationError",
+      mensagem: msg,
+      detalhes: titulo,
+    });
+  };
 
   const handleAddOaFiles = async (novosArquivos: File[]) => {
-    setOaFiles((prev) => [...prev, ...novosArquivos]);
     setLoading(true);
+    setErroApi(null);
 
-    const formData = new FormData();
-    novosArquivos.forEach((f) => formData.append("arquivos", f));
+    const arquivosSucesso: File[] = [];
+    const slotsSucesso: IedSlotData[] = [];
+    const errosEncontrados: string[] = [];
 
-    try {
-      const response = await api.post("api/processamento/ler-oas", formData);
+    await Promise.all(
+      novosArquivos.map(async (file) => {
+        const formData = new FormData();
+        formData.append("arquivos", file);
 
-      const novosSlots: IedSlotData[] = response.data.map((item: any) => ({
-        id: crypto.randomUUID(),
-        nome: item.rele_tipo,
-        arquivo: null,
-        nomeArquivo: item.nome_arquivo,
-      }));
+        try {
+          const response = await api.post(
+            "api/processamento/ler-oas",
+            formData,
+          );
 
-      setIedSlots((prev) => [...prev, ...novosSlots]);
-    } catch (error) {
-      alert("Erro ao ler OAs");
-    } finally {
-      setLoading(false);
+          arquivosSucesso.push(file);
+
+          const slotsDoArquivo: IedSlotData[] = response.data.map(
+            (item: any) => ({
+              id: crypto.randomUUID(),
+              nome: item.rele_tipo,
+              arquivo: null,
+              nomeArquivo: item.nome_arquivo,
+            }),
+          );
+
+          slotsSucesso.push(...slotsDoArquivo);
+        } catch (err: any) {
+          const msgErro = err.response?.data?.mensagem || "Formato inválido";
+          errosEncontrados.push(`${file.name} (${msgErro})`);
+        }
+      }),
+    );
+
+    if (arquivosSucesso.length > 0) {
+      setOaFiles((prev) => [...prev, ...arquivosSucesso]);
+      setIedSlots((prev) => [...prev, ...slotsSucesso]);
     }
+
+    if (errosEncontrados.length > 0) {
+      if (arquivosSucesso.length === 0) {
+        handleLocalError(
+          "Nenhum arquivo foi importado.\n\n• " + errosEncontrados.join("\n• "),
+          "Falha na Importação",
+        );
+      } else {
+        handleLocalError(
+          `Foram importados ${arquivosSucesso.length} arquivos, mas ${errosEncontrados.length} falharam:\n\n• ${errosEncontrados.join("\n• ")}`,
+          "Importação Parcial",
+        );
+      }
+    }
+
+    setLoading(false);
   };
 
   const handleRemoveOaFile = (index: number | string) => {
@@ -53,53 +103,161 @@ function ImportPage() {
 
   const handleBatchIedUpload = async (novosArquivos: File[]) => {
     if (iedSlots.length === 0) {
-      alert("Importe as Ordens de Ajuste primeiro para criar os slots.");
+      handleLocalError(
+        "Você precisa importar as Ordens de Ajuste (OA) primeiro para criar os slots de comparação.",
+        "Fluxo Incorreto",
+      );
       return;
     }
 
     setLoading(true);
+    setErroApi(null);
+
+    const identificacoesSucesso: { file: File; dados: any }[] = [];
+    const errosDeLeitura: string[] = [];
+    const arquivosSemPar: string[] = [];
+
+    await Promise.all(
+      novosArquivos.map(async (file) => {
+        const formData = new FormData();
+        formData.append("arquivos", file);
+
+        try {
+          const response = await api.post(
+            "/api/processamento/ler-ieds",
+            formData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            },
+          );
+
+          const dados = response.data[0];
+
+          if (dados) {
+            identificacoesSucesso.push({ file, dados });
+          } else {
+            errosDeLeitura.push(`${file.name} (Conteúdo não identificado)`);
+          }
+        } catch (err: any) {
+          const msgErro = err.response?.data?.mensagem || "Erro ao ler arquivo";
+          errosDeLeitura.push(`${file.name} (${msgErro})`);
+        }
+      }),
+    );
+
+    let algumArquivoAssociado = false;
+
+    setIedSlots((prevSlots) => {
+      const newSlots = [...prevSlots];
+
+      identificacoesSucesso.forEach(({ file, dados }) => {
+        const slotIndex = newSlots.findIndex((s) => s.nome === dados.rele_tipo);
+
+        if (slotIndex !== -1) {
+          newSlots[slotIndex] = {
+            ...newSlots[slotIndex],
+            arquivo: file,
+          };
+          algumArquivoAssociado = true;
+        } else {
+          arquivosSemPar.push(file.name);
+        }
+      });
+
+      return newSlots;
+    });
+
+    const mensagensDeErro: string[] = [];
+
+    if (errosDeLeitura.length > 0) {
+      mensagensDeErro.push(...errosDeLeitura);
+    }
+
+    if (arquivosSemPar.length > 0) {
+      mensagensDeErro.push(
+        arquivosSemPar.length === 1
+          ? `O arquivo "${arquivosSemPar[0]}" não tem correspondência nas OAs.`
+          : `${arquivosSemPar.length} arquivos não têm correspondência nas OAs.`,
+      );
+    }
+
+    if (mensagensDeErro.length > 0) {
+      if (!algumArquivoAssociado && identificacoesSucesso.length === 0) {
+        handleLocalError(
+          "Falha completa. Erros:\n\n• " + mensagensDeErro.join("\n• "),
+          "Nenhum arquivo importado",
+        );
+      } else {
+        handleLocalError(
+          `Importação parcial. \n\n• ${mensagensDeErro.join("\n• ")}`,
+          "Atenção",
+        );
+      }
+    } else if (
+      !algumArquivoAssociado &&
+      identificacoesSucesso.length > 0 &&
+      arquivosSemPar.length === 0
+    ) {
+      handleLocalError(
+        "Arquivos processados mas nenhum slot correspondente foi encontrado.",
+        "Aviso",
+      );
+    }
+
+    setLoading(false);
+  };
+
+  const handleUpdateIedSlot = async (id: string, file: File) => {
+    const slotAlvo = iedSlots.find((s) => s.id === id);
+    if (!slotAlvo) return;
+
+    setLoading(true);
+    setErroApi(null);
 
     try {
       const formData = new FormData();
-      novosArquivos.forEach((file) => formData.append("arquivos", file));
+      formData.append("arquivos", file);
 
       const response = await api.post("/api/processamento/ler-ieds", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const identificacoes = response.data;
+      const identificacao = response.data[0];
 
-      setIedSlots((prevSlots) =>
-        prevSlots.map((slot) => {
-          const match = identificacoes.find(
-            (item: any) => item.rele_tipo === slot.nome,
-          );
+      if (!identificacao) {
+        handleLocalError(
+          `Não foi possível identificar o tipo de IED no arquivo "${file.name}".`,
+          "Arquivo Desconhecido",
+        );
+        return;
+      }
 
-          if (match) {
-            const arquivoOriginal = novosArquivos.find(
-              (f) => f.name === match.nome_arquivo,
-            );
+      if (identificacao.rele_tipo !== slotAlvo.nome) {
+        handleLocalError(
+          `Este slot pede um arquivo sobre "${slotAlvo.nome}", mas o arquivo enviado é "${identificacao.rele_tipo}".`,
+          "Arquivo Incorreto",
+        );
+        return;
+      }
 
-            if (arquivoOriginal) {
-              return { ...slot, arquivo: arquivoOriginal };
-            }
-          }
-
-          return slot;
-        }),
+      setIedSlots((prev) =>
+        prev.map((slot) =>
+          slot.id === id ? { ...slot, arquivo: file } : slot,
+        ),
       );
-    } catch (error) {
-      console.error("Erro ao identificar IEDs:", error);
-      alert("Erro ao processar arquivos de IED.");
+    } catch (err: any) {
+      if (err.response?.data) {
+        const dadosErro = err.response.data as BackendError;
+        setErroApi(dadosErro);
+      } else {
+        setErroApi({
+          erro: "NetworkError",
+          mensagem: "Erro ao validar o arquivo individual.",
+        });
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleUpdateIedSlot = (id: string, file: File) => {
-    setIedSlots((prev) =>
-      prev.map((slot) => (slot.id === id ? { ...slot, arquivo: file } : slot)),
-    );
   };
 
   const handleRemoveIedFile = (id: number | string) => {
@@ -116,7 +274,10 @@ function ImportPage() {
     const slotsPreenchidos = iedSlots.filter((s) => s.arquivo !== null);
 
     if (slotsPreenchidos.length === 0) {
-      alert("Nenhum par OA + IED completo encontrado.");
+      handleLocalError(
+        "Nenhum par completo encontrado. Associe pelo menos um arquivo de IED a uma Ordem de Ajuste.",
+        "Validação Impossível",
+      );
       return;
     }
 
@@ -143,9 +304,17 @@ function ImportPage() {
       setRelatorioResultados(response.data);
 
       navigate("/resultados");
-    } catch (error) {
-      console.error("Erro na validação:", error);
-      alert("Erro ao validar. Tente novamente.");
+    } catch (err: any) {
+      if (err.response?.data) {
+        const dadosErro = err.response.data as BackendError;
+        setErroApi(dadosErro);
+      } else {
+        setErroApi({
+          erro: "NetworkError",
+          mensagem:
+            "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -159,6 +328,8 @@ function ImportPage() {
         IMPORTAÇÃO DE ARQUIVOS
       </h1>
 
+      <ErrorBanner error={erroApi} onClose={() => setErroApi(null)} />
+
       <div className="mx-auto w-full max-w-7xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <ImportSection
@@ -167,6 +338,7 @@ function ImportPage() {
             arquivosOA={oaFiles}
             onAddFiles={handleAddOaFiles}
             onRemoveFile={handleRemoveOaFile}
+            onError={handleLocalError}
           />
           <ImportSection
             title="Dados de Campo (IEDs)"
@@ -175,6 +347,7 @@ function ImportPage() {
             onUpdateSlot={handleUpdateIedSlot}
             onRemoveFile={handleRemoveIedFile}
             onAddFiles={handleBatchIedUpload}
+            onError={handleLocalError}
           />
         </div>
 

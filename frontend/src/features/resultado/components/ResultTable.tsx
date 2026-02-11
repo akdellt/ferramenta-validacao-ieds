@@ -18,6 +18,18 @@ interface ResultTableProps {
   parametros: ParametroTabela[];
 }
 
+const getStatusWeight = (status: string) => {
+  switch (status) {
+    case "Divergente":
+    case "Não encontrado":
+      return 1;
+    case "Conforme":
+      return 3;
+    default:
+      return 2;
+  }
+};
+
 function ResultTable({ iedNome, parametros }: ResultTableProps) {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -79,56 +91,63 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
                     </td>
                   </tr>
 
-                  {grupos[nomeGrupo].map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-eq-border hover:bg-eq-border/50 border-b last:border-0"
-                    >
-                      <td className="text-primary px-6 py-4 font-medium">
-                        {item.parametro}
-                      </td>
-                      <td
-                        className="text-primary px-6 py-4 font-medium"
-                        title={item.descricao}
+                  {grupos[nomeGrupo]
+                    .sort(
+                      (a, b) =>
+                        getStatusWeight(a.status) - getStatusWeight(b.status),
+                    )
+                    .map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-eq-border hover:bg-eq-border/50 border-b last:border-0"
                       >
-                        {item.descricao}
-                      </td>
-                      <td className="text-primary px-6 py-4 text-right font-mono">
-                        {item.faixa}
-                      </td>
+                        <td className="text-primary px-6 py-4 font-medium">
+                          {item.parametro}
+                        </td>
+                        <td
+                          className="text-primary px-6 py-4 font-medium"
+                          title={item.descricao}
+                        >
+                          {item.descricao}
+                        </td>
+                        <td className="text-primary px-6 py-4 text-right font-mono">
+                          {item.faixa}
+                        </td>
 
-                      <td className="text-primary px-6 py-4 text-right font-mono">
-                        {item.valorRef}
-                      </td>
+                        <td className="text-primary px-6 py-4 text-right font-mono">
+                          {item.valorRef}
+                        </td>
 
-                      <td
-                        className={`px-6 py-4 text-right font-mono ${
-                          item.status === "Divergente"
-                            ? "text-error"
-                            : "text-primary"
-                        }`}
-                      >
-                        {item.valorLido}
-                      </td>
+                        <td
+                          className={`px-6 py-4 text-right font-mono ${
+                            item.status === "Divergente"
+                              ? "text-error"
+                              : "text-primary"
+                          }`}
+                        >
+                          {item.valorLido}
+                        </td>
 
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Circle
-                            size={16}
-                            fill="currentColor"
-                            className={
-                              item.status === "Conforme"
-                                ? "text-success"
-                                : item.status === "Divergente"
-                                  ? "text-error"
-                                  : "text-warning"
-                            }
-                          />
-                          <span className={"text-primary"}>{item.status}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Circle
+                              size={16}
+                              fill="currentColor"
+                              className={
+                                item.status === "Conforme"
+                                  ? "text-success"
+                                  : item.status === "Divergente"
+                                    ? "text-error"
+                                    : "text-warning"
+                              }
+                            />
+                            <span className={"text-primary"}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </>
               ))}
             </tbody>

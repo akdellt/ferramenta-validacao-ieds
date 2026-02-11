@@ -1,6 +1,7 @@
 from typing import Optional
 from enum import Enum
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict
 
 class StatusParametro(str, Enum):
     CONFORME = "Conforme"
@@ -57,3 +58,26 @@ class ParArquivos(BaseModel):
 # CONJUNTO DOS PARES DE ARQUIVOS DE IEDS
 class ConjuntoPares(BaseModel):
     pares: list[ParArquivos]
+
+
+# SCHEMAS PARA O BANCO DE DADOS
+class ValidationLogBase(BaseModel):
+    filename_oa: str
+    filename_ied: str
+    substation: str
+    relay_model: str
+
+    result_json: list[IEDItem] 
+    
+    status: StatusParametro
+    comments: Optional[str] = None
+
+class ValidationLogCreate(ValidationLogBase):
+    pass 
+
+class ValidationLogResponse(ValidationLogBase):
+    id: int
+    created_at: datetime
+    user_id: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)

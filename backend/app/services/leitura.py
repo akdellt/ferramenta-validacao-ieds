@@ -1,7 +1,15 @@
 from app.schemas import ArquivoIED, ArquivoOA, ParametroAtual, ParametroReferencia
 import re
 from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 from io import BytesIO
+from app.exceptions import (
+    EmptyFileError,
+    InvalidFileFormatError,
+    InvalidFileContentError,
+    IEDNotIdentifiedError,
+    FileProcessingError
+)
 
 # FORMATAÇÃO DOS NOMES DOS IEDS (MARCA MODELO)
 PALAVRAS_PROIBIDAS: set[str] = {"RELE", "RELES", "RELAY", "DO", "DA", "DE", "TYPE", "MODELO"}
@@ -43,7 +51,6 @@ def formatar_nome(nome: str) -> str:
     if not palavras_uteis:
         return "NÃO IDENTIFICADO"
 
-    # Retorna no máximo marca + modelo (duas palavras)
     return " ".join(palavras_uteis[:2])
 
 # EXTRAÇÃO DOS PARÂMETROS DA ORDEM DE AJUSTE
@@ -58,7 +65,7 @@ def linha_metadados(valor_param: str | None, texto_linha: str) -> bool:
 
     return False
 
-def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
+def leitura_parametros_oa(ws, nome_arquivo) -> list[ParametroReferencia]:
     lista_parametros = []
     grupo_atual = "GENERAL SETTINGS"
 
@@ -88,10 +95,11 @@ def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
             linha_inicio_dados = i
             break
     
-    # resolver esse print aqui
     if col_param is None or col_ajuste is None:
-        print("Não foi possível localizar coluna 'PARAMETRO' ou 'AJUSTE' no arquivo")
-        return []
+        raise InvalidFileContentError(
+            nome_arquivo=nome_arquivo,
+            motivo="Não localizadas as colunas obrigatórias 'PARAMETRO' e 'AJUSTE SUGERIDO'."
+        )
     
 
     if linha_inicio_dados > 0:
@@ -162,36 +170,64 @@ def leitura_parametros_oa(ws) -> list[ParametroReferencia]:
                     ajuste_referencia=valor_ajuste,
                 )
             )
+        
+    if not lista_parametros:
+        raise InvalidFileContentError(
+            nome_arquivo=nome_arquivo,
+            motivo="Nenhum conteúdo válido foi extraído do arquivo"
+        )
+        
     return lista_parametros
 
 # LEITURA E EXTRAÇÃO DO ARQUIVO DA ORDEM DE AJUSTE
 def leitura_oa(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoOA:
     if not conteudo_arquivo:
-        raise ValueError("Arquivo da OA vazio.")
+        raise EmptyFileError(nome_arquivo=nome_arquivo)
     
     if len(conteudo_arquivo) > MAX_TAMANHO_XLSX_BYTES:
-        raise ValueError(
-            f"Arquivo OA excede o tamanho máximo permitido "
-            f"({MAX_TAMANHO_XLSX_BYTES / 1024 / 1024:.0f} MB)."
+        raise InvalidFileFormatError(
+            nome_arquivo=nome_arquivo,
+            formatos_aceitos=f"Máximo de {MAX_TAMANHO_XLSX_BYTES / 1024 / 1024:.0f} MB"
         )
     
-    arquivo = load_workbook(filename=BytesIO(conteudo_arquivo), data_only=True)
-    ordem_ajuste = arquivo.worksheets[0]
+    try:
+        arquivo = load_workbook(filename=BytesIO(conteudo_arquivo), data_only=True)
 
-    rele_tipo = formatar_nome(ordem_ajuste["D3"].value)
-    subestacao = str(ordem_ajuste["D6"].value).strip()
+        if not arquivo.worksheets:
+             raise InvalidFileContentError(nome_arquivo=nome_arquivo, motivo="O arquivo Excel não possui conteúdo.")
+        
+        ordem_ajuste = arquivo.worksheets[0]
 
-    lista_parametros = leitura_parametros_oa(ordem_ajuste)
-    arquivo.close()
+        cel_d3 = ordem_ajuste["D3"].value
+        cel_d6 = ordem_ajuste["D6"].value
 
-    dados_oa = ArquivoOA(
-        nome_arquivo=nome_arquivo,
-        subestacao=subestacao,
-        rele_tipo=rele_tipo,
-        parametros=lista_parametros
-    )
+        if not cel_d3:
+            raise InvalidFileContentError(
+                nome_arquivo=nome_arquivo, 
+                motivo="Célula D3 (Modelo do Relé) está vazia ou não foi encontrada."
+            )
+            
 
-    return dados_oa
+        rele_tipo = formatar_nome(cel_d3)
+        subestacao = str(cel_d6).strip() if cel_d6 else "NÃO IDENTIFICADA"
+
+        lista_parametros = leitura_parametros_oa(ordem_ajuste, nome_arquivo)
+        arquivo.close()
+
+        return ArquivoOA(
+            nome_arquivo=nome_arquivo,
+            subestacao=subestacao,
+            rele_tipo=rele_tipo,
+            parametros=lista_parametros
+        )
+
+    except InvalidFileException:
+        raise InvalidFileFormatError(nome_arquivo=nome_arquivo, formatos_aceitos=".xlsx, .xls")
+    except Exception as e:
+        # Se for um dos nossos erros, deixa subir. Se for desconhecido, empacota.
+        if isinstance(e, (EmptyFileError, InvalidFileFormatError, InvalidFileContentError)):
+            raise e
+        raise FileProcessingError(nome_arquivo=nome_arquivo, erro_original=str(e))
 
 
 
@@ -217,7 +253,7 @@ def leitura_parametros_ied(texto: str) -> list[ParametroAtual]:
 # LEITURA E EXTRAÇÃO DO ARQUIVO DA IED
 def leitura_ied(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoIED:
     if not conteudo_arquivo:
-        raise ValueError("Arquivo IED vazio")
+        raise EmptyFileError(nome_arquivo=nome_arquivo)
 
     texto = conteudo_arquivo.decode("utf-8", errors="ignore")
     
@@ -225,6 +261,8 @@ def leitura_ied(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoIED:
     match_rele = re.search(r"FID=([^\s]+)", texto)
     if match_rele:
         rele_tipo = formatar_nome(match_rele.group(1))
+    else:
+        raise IEDNotIdentifiedError(nome_arquivo=nome_arquivo)
 
     lista_parametros = leitura_parametros_ied(texto)
 
@@ -233,5 +271,11 @@ def leitura_ied(conteudo_arquivo: bytes, nome_arquivo: str) -> ArquivoIED:
         rele_tipo=rele_tipo,
         parametros=lista_parametros
     )
+
+    if not lista_parametros:
+        raise InvalidFileContentError(
+            nome_arquivo=nome_arquivo,
+            motivo="Nenhum parâmetro encontrado. Verifique se o arquivo segue o padrão CHAVE,\"VALOR\"."
+        )
 
     return dados_ied

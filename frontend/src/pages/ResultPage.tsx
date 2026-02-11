@@ -20,9 +20,16 @@ function ResultPage() {
   const relatorio = relatorioResultados as RelatorioBackend | undefined;
 
   const [iedSelecionado, setIedSelecionado] = useState<string | null>(null);
+
+  const possuiDivergencias = relatorio?.resultados.some((ied) =>
+    ied.lista_parametros.some((p) =>
+      ["Divergente", "Não encontrado"].includes(p.status),
+    ),
+  );
+
   const [filtroStatus, setFiltroStatus] = useState<
     "total" | "conforme" | "divergente"
-  >("total");
+  >(possuiDivergencias ? "divergente" : "total");
 
   useEffect(() => {
     if (!relatorio) {

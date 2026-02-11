@@ -25,10 +25,8 @@ export const useSidebar = () => {
   ];
 
   const handleClearData = () => {
-    if (window.confirm("Deseja limpar todos os dados importados?")) {
-      limparSessao();
-      navigate("/");
-    }
+    limparSessao();
+    navigate("/");
   };
 
   const handleHelp = () => {

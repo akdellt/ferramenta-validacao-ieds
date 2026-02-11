@@ -14,6 +14,7 @@ interface ImportSectionProps {
   onAddFiles?: (files: File[]) => void;
   onRemoveFile?: (id: number | string) => void;
   onUpdateSlot?: (id: string, file: File) => void;
+  onError?: (msg: string, title?: string) => void;
 }
 
 export interface IedSlotData {
@@ -31,6 +32,7 @@ function ImportSection({
   onAddFiles,
   onRemoveFile,
   onUpdateSlot,
+  onError,
 }: ImportSectionProps) {
   const config = FILE_CONFIG[tipoArquivo];
 
@@ -47,6 +49,7 @@ function ImportSection({
           onFilesReceived={handleDropzoneReceive}
           accept={config.accept}
           maxSizeMB={config.maxSizeMB}
+          onError={onError}
         />
       </div>
 

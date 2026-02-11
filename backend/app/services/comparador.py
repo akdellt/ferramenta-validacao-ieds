@@ -1,12 +1,17 @@
 from app.schemas import *
+from app.exceptions import IncompatiblePairError
 
 VALORES_NAO_APLICAVEL: set[str] = {"-", "—", "N/A", "NA", "S/A"}
 
 def nao_aplicavel(valor: str) -> bool:
+    if not valor: return False
     return valor.strip() in VALORES_NAO_APLICAVEL
 
 # FUNÇÃO AUXILIAR PARA IDENTIFICAR VALORES NUMÉRICOS
 def comparar_valores(valor_ref: str, valor_lido: str) -> bool:
+    if valor_ref is None: valor_ref = ""
+    if valor_lido is None: valor_lido = ""
+
     s_ref = str(valor_ref).strip().lower()
     s_lido = str(valor_lido).strip().lower()
 
@@ -59,11 +64,6 @@ def validar_parametros(oa: ArquivoOA, ied: ArquivoIED) -> ResultadoValidacao:
             valor_atual=valor_atual_ied,
             status=status
         ))
-
-    tem_problema = any(
-        item.status in (StatusParametro.DIVERGENTE, StatusParametro.NAO_ENCONTRADO)
-        for item in param_validados
-    )
         
     resultado_validacao = ResultadoValidacao(
         rele_tipo=oa.rele_tipo,
@@ -78,8 +78,10 @@ def validar_ied(par: ParArquivos) -> ResultadoValidacao:
     rele_ied = str(par.ied.rele_tipo).strip().lower()
 
     if rele_oa not in rele_ied and rele_ied not in rele_oa:
-        raise ValueError(
-            f"Modelos incompatíveis: OA='{par.oa.rele_tipo}' vs IED='{par.ied.rele_tipo}'"
+        raise IncompatiblePairError(
+            oa_file=par.oa.nome_arquivo,
+            ied_file=par.ied.nome_arquivo,
+            motivo=f"O modelo da OA é '{rele_oa}' mas o arquivo de campo indica '{rele_ied}'."
         )
 
     return validar_parametros(par.oa, par.ied)
@@ -89,13 +91,7 @@ def processar_arquivos(lote: ConjuntoPares) -> RelatorioValidacoes:
     resultados = []
 
     for par in lote.pares:
-        try:
-            resultado = validar_ied(par)
-            resultados.append(resultado)
-        except Exception as e:
-            resultados.append(ResultadoValidacao(
-                rele_tipo=f"{par.oa.rele_tipo} / {par.ied.rele_tipo}",
-                lista_parametros=[]
-            ))
+        resultado = validar_ied(par)
+        resultados.append(resultado)
 
     return RelatorioValidacoes(resultados=resultados)

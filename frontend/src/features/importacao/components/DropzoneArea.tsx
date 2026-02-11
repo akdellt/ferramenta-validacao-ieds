@@ -3,12 +3,14 @@ import { Upload, Info } from "lucide-react";
 
 interface DropzoneAreaProps {
   onFilesReceived: (files: File[]) => void;
+  onError?: (mensagem: string, titulo?: string) => void;
   accept?: string;
   maxSizeMB?: number;
 }
 
 function DropzoneArea({
   onFilesReceived,
+  onError,
   accept,
   maxSizeMB = 5,
 }: DropzoneAreaProps) {
@@ -45,6 +47,7 @@ function DropzoneArea({
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       validarEEnviar(Array.from(e.target.files));
+      e.target.value = "";
     }
   };
 
@@ -90,11 +93,15 @@ function DropzoneArea({
     });
 
     if (arquivosInvalidos.length > 0) {
-      const mensagem = arquivosInvalidos
-        .map((item) => `• ${item.nome}\n  ${item.motivo}`)
-        .join("\n\n");
-
-      alert(`Arquivos inválidos:\n\n${mensagem}`);
+      if (onError) {
+        const msg = arquivosInvalidos
+          .map((a) => `${a.nome}: ${a.motivo}`)
+          .join("; ");
+        onError(
+          `Alguns arquivos foram rejeitados: ${msg}`,
+          "Erro de Validação Local",
+        );
+      }
     }
 
     if (arquivosValidos.length > 0) {
