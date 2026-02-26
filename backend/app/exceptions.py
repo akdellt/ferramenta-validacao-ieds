@@ -27,7 +27,7 @@ class EmptyFileError(AppException):
 
 class InvalidFileFormatError(AppException):
     """ Arquivo no formato inválido:
-    - Extensão incorreta (.xlsx, .xls, .txt)
+    - Extensão incorreta (.xlsx, .xls, .txt, .scd, .xml)
     - Tamanho acima do limite
     """
     def __init__(self, nome_arquivo: str, formatos_aceitos: str):
@@ -51,11 +51,12 @@ class InvalidFileContentError(AppException):
 
 class IEDNotIdentifiedError(AppException):
     """ Tipo de IED não identificado """
-    def __init__(self, nome_arquivo: str):
+    def __init__(self, nome_arquivo: str, detalhes: Optional[str] = None):
         super().__init__(
             mensagem=f"Não foi possível identificar o modelo do IED no arquivo '{nome_arquivo}'",
             status_code=422,
-            nome_arquivo=nome_arquivo
+            nome_arquivo=nome_arquivo,
+            detalhes=detalhes
         )
 
 class DuplicatedReferenceError(AppException):
@@ -103,4 +104,16 @@ class ProcessingTimeoutError(AppException):
         super().__init__(
             mensagem=f"O processamento excedeu o tempo limite de {tempo_limite}.",
             status_code=408,
+        )
+
+class EngineeringRuleError(AppException):
+    """
+    Violação de regra da empresa (VBs, Datasets, MACs).
+    """
+    def __init__(self, regra: str, causa: str, nome_arquivo: Optional[str] = None):
+        super().__init__(
+            mensagem=f"Violação de regra de engenharia ({regra}): {causa}",
+            status_code=400,
+            nome_arquivo=nome_arquivo,
+            detalhes=causa
         )

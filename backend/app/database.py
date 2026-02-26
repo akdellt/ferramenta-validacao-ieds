@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./local_test.db")
 if SQLALCHEMY_DATABASE_URL is None:
     raise ValueError("A variável de ambiente DATABASE_URL não está definida!")
 

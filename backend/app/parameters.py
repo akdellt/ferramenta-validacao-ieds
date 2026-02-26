@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
@@ -62,15 +62,13 @@ class ConjuntoPares(BaseModel):
 
 # SCHEMAS PARA O BANCO DE DADOS
 class ValidationLogBase(BaseModel):
-    filename_oa: str
-    filename_ied: str
     substation: str
     relay_model: str
-
-    result_json: list[IEDItem] 
-    
-    status: StatusParametro
-    comments: Optional[str] = None
+    filename_oa: str
+    filename_ied: str
+    result_json: list[dict[str, Any]] 
+    status: str
+    user_id: Optional[int] = None
 
 class ValidationLogCreate(ValidationLogBase):
     pass 
@@ -78,6 +76,5 @@ class ValidationLogCreate(ValidationLogBase):
 class ValidationLogResponse(ValidationLogBase):
     id: int
     created_at: datetime
-    user_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

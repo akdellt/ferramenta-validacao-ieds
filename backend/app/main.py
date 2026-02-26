@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .exceptions import AppException
 from .database import engine, Base
-from .routers import processamento, historico
+from .routers import processamento, historico, topologies
 import traceback
 
 Base.metadata.create_all(bind=engine)
@@ -13,7 +13,9 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "*" # remover depois
 ]
 
 app.add_middleware(
@@ -27,6 +29,7 @@ app.add_middleware(
 api_prefix = "/api"
 app.include_router(processamento.router, prefix=api_prefix)
 app.include_router(historico.router, prefix=api_prefix)
+app.include_router(topologies.router, prefix=api_prefix)
 
 @app.get("/")
 def root():
