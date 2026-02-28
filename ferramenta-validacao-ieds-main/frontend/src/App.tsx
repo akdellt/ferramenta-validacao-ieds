@@ -7,6 +7,7 @@ import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 
 import TopologyPage from "./pages/TopologyPage"; 
+import CircuitsPage from "./pages/CircuitsPage";
 
 function App() {
   return (
@@ -20,7 +21,7 @@ function App() {
 
         <main className="h-full flex-1 overflow-y-auto">
           <Routes>
-            
+            <Route path="/resultados" element={<CircuitsPage />} />
             <Route path="/topologia" element={<TopologyPage />} />
             <Route path="/" element={<ImportPage />} />
             <Route path="/resultados" element={<ResultPage />} />
