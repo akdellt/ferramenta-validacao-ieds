@@ -147,7 +147,7 @@ function TopologyPage() {
 
           {topologia === "PARALLELISM" && transformadores.length < 2 && (
             <p className="mt-2 text-xs font-bold text-amber-600 animate-pulse">
-              ⚠️ Adicione pelo menos mais um transformador para operar em paralelismo.
+               Adicione pelo menos mais um transformador para operar em paralelismo.
             </p>
           )}
         </div>
