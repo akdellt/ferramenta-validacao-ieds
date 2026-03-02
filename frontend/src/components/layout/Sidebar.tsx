@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Info, Trash2 } from "lucide-react";
+import { User2, Trash2, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import EQ from "../../assets/EQ.svg";
 import { useSidebar } from "../../hooks/useSidebar";
+import { useAuth } from "../../context/AuthContext";
 import ConfirmDelete from "../common/ConfirmDelete";
 
 interface SidebarItemProps {
@@ -35,7 +36,15 @@ function SidebarItem({
 }
 
 function Sidebar() {
-  const { menuItems, handleClearData, handleHelp } = useSidebar();
+  const { user } = useAuth();
+
+  const {
+    menuItems,
+    handleClearData,
+    isProfileOpen,
+    toggleProfile,
+    handleLogout,
+  } = useSidebar();
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -74,11 +83,29 @@ function Sidebar() {
           ))}
         </nav>
 
-        <div className="mt-auto flex w-full flex-col gap-5 px-3">
+        <div className="relative mt-auto flex w-full flex-col gap-5 px-3">
+          {isProfileOpen && (
+            <div className="animate-in fade-in zoom-in border-eq-border absolute bottom-16 left-full ml-2 w-48 overflow-hidden rounded-xl border bg-white shadow-2xl duration-200">
+              <div className="border-eq-border border-b bg-white px-4 py-3">
+                <p className="text-eq-primary text-[12px] font-black tracking-tighter uppercase">
+                  {user?.name || "Usuário"}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-error flex w-full cursor-pointer items-center gap-3 px-4 py-4 text-sm font-bold transition-colors hover:bg-rose-50"
+              >
+                <LogOut size={18} />
+                SAIR DO SISTEMA
+              </button>
+            </div>
+          )}
+
           <SidebarItem
-            icon={<Info size={32} />}
-            label="Ajuda"
-            onClick={handleHelp}
+            icon={<User2 size={32} />}
+            label="Perfil"
+            isActive={isProfileOpen}
+            onClick={toggleProfile}
           />
           <SidebarItem
             icon={<Trash2 size={32} />}
@@ -91,7 +118,7 @@ function Sidebar() {
       <ConfirmDelete
         isOpen={isDeleteModalOpen}
         title="Limpar todos os dados?"
-        message="Tem certeza que deseja remover todos os arquivos importados e resultados gerados? Você voltará para a tela inicial."
+        message="Tem certeza que deseja remover todos os arquivos importados e resultados gerados? Você voltará para a tela inicial"
         confirmLabel="Sim, limpar tudo"
         cancelLabel="Cancelar"
         onConfirm={confirmAndClear}

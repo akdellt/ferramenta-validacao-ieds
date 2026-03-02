@@ -68,7 +68,7 @@ class ValidationLogBase(BaseModel):
     filename_ied: str
     result_json: list[dict[str, Any]] 
     status: str
-    user_id: Optional[int] = None
+    user_registration: Optional[str] = None
 
 class ValidationLogCreate(ValidationLogBase):
     pass 
@@ -76,5 +76,4 @@ class ValidationLogCreate(ValidationLogBase):
 class ValidationLogResponse(ValidationLogBase):
     id: int
     created_at: datetime
-
     model_config = ConfigDict(from_attributes=True)

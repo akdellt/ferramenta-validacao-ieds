@@ -64,7 +64,7 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
 
       {isOpen && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-base text-[16px]">
+          <table className="w-full text-left text-base">
             <thead className="text-primary border-eq-border bg-bg-dashboard border-b font-bold tracking-wider whitespace-nowrap uppercase">
               <tr>
                 <th className="w-50 px-6 py-2">Parâmetro</th>

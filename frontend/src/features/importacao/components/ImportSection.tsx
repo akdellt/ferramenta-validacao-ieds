@@ -22,6 +22,7 @@ export interface IedSlotData {
   nome: string;
   arquivo: File | null;
   nomeArquivo: string;
+  subestacao: string;
 }
 
 function ImportSection({

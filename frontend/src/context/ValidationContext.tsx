@@ -4,13 +4,13 @@ import { type IedSlotData } from "../features/importacao/components/ImportSectio
 interface ValidationContextData {
   oaFiles: File[];
   iedSlots: IedSlotData[];
-  relatorioResultados: any | null;
+  reportResults: any | null;
 
   setOaFiles: React.Dispatch<React.SetStateAction<File[]>>;
   setIedSlots: React.Dispatch<React.SetStateAction<IedSlotData[]>>;
-  setRelatorioResultados: (dados: any) => void;
+  setReportResults: (data: any) => void;
 
-  limparSessao: () => void;
+  clearSession: () => void;
 }
 
 const ValidationContext = createContext({} as ValidationContextData);
@@ -18,14 +18,12 @@ const ValidationContext = createContext({} as ValidationContextData);
 export function ValidationProvider({ children }: { children: ReactNode }) {
   const [oaFiles, setOaFiles] = useState<File[]>([]);
   const [iedSlots, setIedSlots] = useState<IedSlotData[]>([]);
-  const [relatorioResultados, setRelatorioResultados] = useState<any | null>(
-    null,
-  );
+  const [reportResults, setReportResults] = useState<any | null>(null);
 
-  const limparSessao = () => {
+  const clearSession = () => {
     setOaFiles([]);
     setIedSlots([]);
-    setRelatorioResultados(null);
+    setReportResults(null);
     window.location.href = "/";
   };
 
@@ -36,9 +34,9 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
         setOaFiles,
         iedSlots,
         setIedSlots,
-        relatorioResultados,
-        setRelatorioResultados,
-        limparSessao,
+        reportResults,
+        setReportResults,
+        clearSession,
       }}
     >
       {children}

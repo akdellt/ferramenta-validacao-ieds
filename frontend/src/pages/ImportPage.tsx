@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 import { api } from "../services/api";
 import ImportSection, {
@@ -11,8 +12,9 @@ import { type BackendError } from "../types";
 
 function ImportPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const { oaFiles, setOaFiles, iedSlots, setIedSlots, setRelatorioResultados } =
+  const { oaFiles, setOaFiles, iedSlots, setIedSlots, setReportResults } =
     useValidation();
 
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,7 @@ function ImportPage() {
               nome: item.rele_tipo,
               arquivo: null,
               nomeArquivo: item.nome_arquivo,
+              subestacao: item.subestacao,
             }),
           );
 
@@ -301,7 +304,47 @@ function ImportPage() {
         formData,
       );
 
-      setRelatorioResultados(response.data);
+      const listaResultados = response.data.resultados || response.data;
+
+      if (Array.isArray(listaResultados)) {
+        await Promise.all(
+          listaResultados.map(async (resultado: any) => {
+            const nameSlot = iedSlots.find(
+              (s) => s.nome === resultado.rele_tipo,
+            );
+            const OAFileName =
+              nameSlot?.nomeArquivo || resultado.nome_arquivo_oa;
+
+            const temErro = resultado.lista_parametros.some(
+              (p: any) =>
+                p.status === "DIVERGENTE" || p.status === "NAO_ENCONTRADO",
+            );
+
+            const logData = {
+              relay_model: resultado.rele_tipo,
+              substation:
+                iedSlots.find((s) => s.nome === resultado.rele_tipo)
+                  ?.subestacao || "N/A",
+
+              filename_oa: OAFileName,
+              filename_ied: resultado.nome_arquivo_ied || "arquivo_ied.txt",
+
+              result_json: resultado.lista_parametros,
+              status: temErro ? "Divergente" : "Conforme",
+
+              user_registration: user?.registration || null,
+            };
+
+            return api
+              .post("/api/logs/", logData)
+              .catch((err) =>
+                console.error("Erro silencioso ao salvar histórico:", err),
+              );
+          }),
+        );
+      }
+
+      setReportResults(response.data);
 
       navigate("/resultados");
     } catch (err: any) {

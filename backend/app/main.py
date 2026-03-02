@@ -1,15 +1,40 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .exceptions import AppException
-from .database import engine, Base
-from .routers import processamento, historico, topologies
+from .database import engine, SessionLocal
+from .routers import logs, processamento, topologies, auth
+from . import models
 import traceback
 
-Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        models.Base.metadata.create_all(bind=engine)
+        
+        user = db.query(models.User).filter(models.User.registration == "A123").first()
+        if not user:
+            master_user = models.User(
+                registration="A123",
+                full_name="Danyelle Machado",
+                hashed_password="123456",
+                role="Admin"
+            )
+            db.add(master_user)
+            db.commit()
+    except Exception as e:
+        print(f"Erro na inicialização: {e}")
+    finally:
+        db.close()
+    
+    yield
 
 app = FastAPI(
-    title="Ferramenta de Validação de Parâmetros"
+    title="Ferramenta de Validação de Parâmetros",
+    lifespan=lifespan
 )
 
 origins = [
@@ -27,8 +52,9 @@ app.add_middleware(
 )
 
 api_prefix = "/api"
+app.include_router(auth.router, prefix=api_prefix)
 app.include_router(processamento.router, prefix=api_prefix)
-app.include_router(historico.router, prefix=api_prefix)
+app.include_router(logs.router, prefix=api_prefix)
 app.include_router(topologies.router, prefix=api_prefix)
 
 @app.get("/")

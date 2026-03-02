@@ -16,8 +16,8 @@ import type {
 
 function ResultPage() {
   const navigate = useNavigate();
-  const { relatorioResultados } = useValidation();
-  const relatorio = relatorioResultados as RelatorioBackend | undefined;
+  const { reportResults } = useValidation();
+  const relatorio = reportResults as RelatorioBackend | undefined;
 
   const [iedSelecionado, setIedSelecionado] = useState<string | null>(null);
 

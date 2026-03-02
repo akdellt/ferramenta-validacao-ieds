@@ -1,10 +1,14 @@
-import { CloudUpload, Network, ShieldCheck } from "lucide-react";
+import { CloudUpload, Network, ShieldCheck, LogsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useValidation } from "../context/ValidationContext";
 
 export const useSidebar = () => {
   const navigate = useNavigate();
-  const { limparSessao } = useValidation();
+  const { clearSession } = useValidation();
+  const { logout } = useAuth();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const menuItems = [
     {
@@ -15,27 +19,40 @@ export const useSidebar = () => {
     {
       name: "Topologia",
       icon: <Network size={32} />,
-      path: "/topologia",
+      path: "/topologies",
     },
     {
       name: "Resultados",
       icon: <ShieldCheck size={32} />,
       path: "/resultados",
     },
+    {
+      name: "Histórico",
+      icon: <LogsIcon size={32} />,
+      path: "/logs",
+    },
   ];
 
   const handleClearData = () => {
-    limparSessao();
+    clearSession();
     navigate("/");
   };
 
-  const handleHelp = () => {
-    alert("Fazer depois");
+  const toggleProfile = () => {
+    setIsProfileOpen(!isProfileOpen);
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    logout();
+    navigate("/login");
   };
 
   return {
     menuItems,
     handleClearData,
-    handleHelp,
+    isProfileOpen,
+    toggleProfile,
+    handleLogout,
   };
 };
