@@ -20,6 +20,7 @@ function SidebarItem({
 }: SidebarItemProps) {
   return (
     <div
+    onClick={() => navigator ('/topologies')}
       onClick={onClick}
       title={label}
       className={`flex aspect-square w-full cursor-pointer items-center justify-center rounded-xl transition-all duration-200 ${

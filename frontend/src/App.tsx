@@ -6,6 +6,8 @@ import ResultPage from "./pages/ResultPage";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 
+import TopologyPage from "./pages/TopologyPage"; 
+
 function App() {
   return (
     <div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
@@ -18,6 +20,8 @@ function App() {
 
         <main className="h-full flex-1 overflow-y-auto">
           <Routes>
+            
+            <Route path="/topologia" element={<TopologyPage />} />
             <Route path="/" element={<ImportPage />} />
             <Route path="/resultados" element={<ResultPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
