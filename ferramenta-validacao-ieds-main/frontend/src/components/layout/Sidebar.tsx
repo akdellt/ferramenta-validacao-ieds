@@ -1,0 +1,131 @@
+import { useState } from "react";
+import { User2, Trash2, LogOut } from "lucide-react";
+import { NavLink } from "react-router-dom";
+import EQ from "../../assets/EQ.svg";
+import { useSidebar } from "../../hooks/useSidebar";
+import { useAuth } from "../../context/AuthContext";
+import ConfirmDelete from "../common/ConfirmDelete";
+
+interface SidebarItemProps {
+  icon: React.ReactNode;
+  label: string;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+function SidebarItem({
+  icon,
+  label,
+  isActive = false,
+  onClick,
+}: SidebarItemProps) {
+  return (
+    <div
+      onClick={onClick}
+      title={label}
+      className={`flex aspect-square w-full cursor-pointer items-center justify-center rounded-xl transition-all duration-200 ${
+        isActive
+          ? "bg-eq-primary text-white shadow-lg"
+          : "text-bg-secondary hover:bg-white/10 hover:text-white"
+      } `}
+      aria-label={label}
+    >
+      {icon}
+    </div>
+  );
+}
+
+function Sidebar() {
+  const { user } = useAuth();
+
+  const {
+    menuItems,
+    handleClearData,
+    isProfileOpen,
+    toggleProfile,
+    handleLogout,
+  } = useSidebar();
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const confirmAndClear = () => {
+    handleClearData();
+    setIsDeleteModalOpen(false);
+  };
+
+  return (
+    <>
+      <aside className="bg-eq-primary z-50 flex h-full w-23 flex-col items-center py-6 text-white">
+        <div className="mb-5 flex items-center justify-center">
+          <img src={EQ} alt="Logo EQ" className="h-10 w-10" />
+        </div>
+
+        <div className="mb-6 w-full px-4">
+          <div className="h-px w-full bg-white/20" />
+        </div>
+
+        <nav className="flex w-full flex-1 flex-col gap-5 px-3">
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className="w-full"
+              end={item.path === "/"}
+            >
+              {({ isActive }) => (
+                <SidebarItem
+                  icon={item.icon}
+                  label={item.name}
+                  isActive={isActive}
+                />
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="relative mt-auto flex w-full flex-col gap-5 px-3">
+          {isProfileOpen && (
+            <div className="animate-in fade-in zoom-in border-eq-border absolute bottom-16 left-full ml-2 w-48 overflow-hidden rounded-xl border bg-white shadow-2xl duration-200">
+              <div className="border-eq-border border-b bg-white px-4 py-3">
+                <p className="text-eq-primary text-[12px] font-black tracking-tighter uppercase">
+                  {user?.name || "Usuário"}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-error flex w-full cursor-pointer items-center gap-3 px-4 py-4 text-sm font-bold transition-colors hover:bg-rose-50"
+              >
+                <LogOut size={18} />
+                SAIR DO SISTEMA
+              </button>
+            </div>
+          )}
+
+          <SidebarItem
+            icon={<User2 size={32} />}
+            label="Perfil"
+            isActive={isProfileOpen}
+            onClick={toggleProfile}
+          />
+          <SidebarItem
+            icon={<Trash2 size={32} />}
+            label="Limpar"
+            onClick={() => setIsDeleteModalOpen(true)}
+          />
+        </div>
+      </aside>
+
+      <ConfirmDelete
+        isOpen={isDeleteModalOpen}
+        title="Limpar todos os dados?"
+        message="Tem certeza que deseja remover todos os arquivos importados e resultados gerados? Você voltará para a tela inicial"
+        confirmLabel="Sim, limpar tudo"
+        cancelLabel="Cancelar"
+        onConfirm={confirmAndClear}
+        onCancel={() => setIsDeleteModalOpen(false)}
+      />
+    </>
+  );
+}
+
+export default Sidebar;
