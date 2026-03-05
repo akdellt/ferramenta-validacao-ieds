@@ -3,13 +3,19 @@ export const FILE_CONFIG = {
     maxSizeMB: 5,
     accept: ".xlsx,.xls",
     displayName: "Ordens de Ajuste",
-    emptyMessage: "Nenhum arquivo importado",
+    emptyMessage: "Nenhuma Ordem de Ajuste importada",
   },
   IED: {
     maxSizeMB: 2,
     accept: ".txt",
     displayName: "Dados de Campo (IEDs)",
-    emptyMessage: "Nenhum IED encontrado",
+    emptyMessage: "Nenhum arquivo de IED encontrado",
+  },
+  SCD: {
+    maxSizeMB: 50,
+    accept: ".scd,.xml",
+    displayName: "Projeto de Topologia (SCD)",
+    emptyMessage: "Nenhum arquivo SCD/XML selecionado",
   },
 } as const;
 

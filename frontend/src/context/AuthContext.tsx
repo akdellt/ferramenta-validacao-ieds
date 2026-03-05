@@ -1,39 +1,52 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { type User } from "../types/auth";
+import { useEffect } from "react";
 
 interface AuthContextType {
-  user: { registration: string; name: string } | null;
-  login: (registration: string, name: string) => void;
+  user: User | null;
+  login: (userData: User) => void;
   logout: () => void;
+  isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthContextType["user"]>(() => {
-    const savedRegistration = localStorage.getItem("user_registration");
-    const savedName = localStorage.getItem("user_name");
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    if (savedRegistration && savedName) {
-      return { registration: savedRegistration, name: savedName };
+  useEffect(() => {
+    const savedUser = localStorage.getItem("@Equatorial:user");
+
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("@Equatorial:user");
+      }
     }
-    return null;
-  });
 
-  const login = (registration: string, name: string) => {
-    const userData = { registration, name };
+    setLoading(false);
+  }, []);
+
+  const login = (userData: User) => {
     setUser(userData);
-    localStorage.setItem("user_registration", registration);
-    localStorage.setItem("user_name", name);
+    localStorage.setItem("@Equatorial:user", JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user_registration");
-    localStorage.removeItem("user_name");
+    localStorage.removeItem("@Equatorial:user");
+    localStorage.removeItem("@Equatorial:token");
   };
 
+  const isAuthenticated = !!user;
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, isAuthenticated, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -41,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context)
+  if (!context) {
     throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+  }
   return context;
 };

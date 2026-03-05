@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from .. import models, parameters
+from ..schemas import logs
+from .. import models
 from ..database import get_db
 
 router = APIRouter(
     prefix="/logs", 
-    tags=["Histórico"]
+    tags=["Validation History"]
 )
 
 # SALVAR UM NOVO HISTÓRICO
-@router.post("/", response_model=parameters.ValidationLogResponse, status_code=status.HTTP_201_CREATED)
-def create_log(log: parameters.ValidationLogCreate, db: Session = Depends(get_db)):
-    db_log = models.ValidationLog(**log.model_dump())
+@router.post("/", response_model=logs.ValidationLogResponse, status_code=status.HTTP_201_CREATED)
+def create_log(log_data: logs.ValidationLogCreate, db: Session = Depends(get_db)):
+    db_log = models.ValidationLog(**log_data.model_dump())
     
     db.add(db_log)
     db.commit()
@@ -21,13 +22,17 @@ def create_log(log: parameters.ValidationLogCreate, db: Session = Depends(get_db
     return db_log
 
 # LISTAR TODOS (PARA A TABELA)
-@router.get("/", response_model=list[parameters.ValidationLogResponse])
+@router.get("/", response_model=list[logs.ValidationLogResponse])
 def get_log_list(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    logs = db.query(models.ValidationLog).order_by(models.ValidationLog.created_at.desc()).offset(skip).limit(limit).all()
-    return logs
+    history_logs = db.query(models.ValidationLog)\
+        .order_by(models.ValidationLog.created_at.desc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    return history_logs
 
 # PEGAR UM ESPECÍFICO (DETALHES)
-@router.get("/{log_id}", response_model=parameters.ValidationLogResponse)
+@router.get("/{log_id}", response_model=logs.ValidationLogResponse)
 def get_log(log_id: int, db: Session = Depends(get_db)):
     log = db.query(models.ValidationLog).filter(models.ValidationLog.id == log_id).first()
     

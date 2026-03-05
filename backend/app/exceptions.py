@@ -1,119 +1,107 @@
-from typing import Optional
-
 class AppException(Exception):
-    """ Exceção base """
     def __init__(
             self, 
-            mensagem: str, 
+            message: str, 
             status_code: int = 400, 
-            nome_arquivo: Optional[str] = None, 
-            detalhes: Optional[str] = None
+            filename: str | None = None, 
+            details: str | None = None
         ):
-        self.mensagem = mensagem
+        self.message = message
         self.status_code = status_code
-        self.nome_arquivo = nome_arquivo
-        self.detalhes = detalhes
-        super().__init__(self.mensagem)
+        self.filename = filename
+        self.details = details
+        super().__init__(self.message)
 
 # ARQUIVOS
 class EmptyFileError(AppException):
-    """ Arquivo vazio """
-    def __init__(self, nome_arquivo: str):
+    def __init__(self, filename: str):
         super().__init__(
-            mensagem=f"O arquivo '{nome_arquivo}' está vazio.",
+            message=f"O arquivo '{filename}' está vazio.",
             status_code=400,
-            nome_arquivo=nome_arquivo
+            filename=filename
+        )
+
+class FileTooLargeError(AppException):
+    def __init__(self, filename: str, max_size_mb: int):
+        super().__init__(
+            message=f"O arquivo '{filename}' excede o limite de {max_size_mb}MB.",
+            status_code=413,
+            filename=filename
         )
 
 class InvalidFileFormatError(AppException):
-    """ Arquivo no formato inválido:
-    - Extensão incorreta (.xlsx, .xls, .txt, .scd, .xml)
-    - Tamanho acima do limite
-    """
-    def __init__(self, nome_arquivo: str, formatos_aceitos: str):
+    def __init__(self, filename: str, accepted_formats: str):
         super().__init__(
-            mensagem=f"Formato inválido para '{nome_arquivo}'. Aceitos: {formatos_aceitos}",
+            message=f"Formato inválido para '{filename}'. Aceitos: {accepted_formats}",
             status_code=415,
-            nome_arquivo=nome_arquivo
+            filename=filename
         )
 
 class InvalidFileContentError(AppException):
-    """ Arquivo com conteúdo não correspondente ao esperado
-    - Não possui os cabeçalhos das OAs/Logs de IEDs
-    - Dados vazios"""
-    def __init__(self, nome_arquivo: str, motivo: str):
+    def __init__(self, filename: str, details: str):
         super().__init__(
-            mensagem=f"Conteúdo inválido em '{nome_arquivo}': {motivo}",
+            message=f"Conteúdo inválido em '{filename}': {details}",
             status_code=422,
-            nome_arquivo=nome_arquivo,
-            detalhes=motivo
+            filename=filename,
+            details=details
         )
 
 class IEDNotIdentifiedError(AppException):
-    """ Tipo de IED não identificado """
-    def __init__(self, nome_arquivo: str, detalhes: Optional[str] = None):
+    def __init__(self, filename: str, details: str | None = None):
         super().__init__(
-            mensagem=f"Não foi possível identificar o modelo do IED no arquivo '{nome_arquivo}'",
+            message=f"Não foi possível identificar o modelo do IED no arquivo '{filename}'",
             status_code=422,
-            nome_arquivo=nome_arquivo,
-            detalhes=detalhes
+            filename=filename,
+            details=details
         )
 
 class DuplicatedReferenceError(AppException):
-    """ Dois ou mais arquivos referentes a um mesmo IED"""
-    def __init__(self, tipo_rele: str, arquivos: list[str]):
+    def __init__(self, relay_model: str, files: list[str]):
         super().__init__(
-            mensagem=f"Conflito: Mais de um arquivo de OA encontrado para o relé '{tipo_rele}'.",
+            message=f"Conflito: Mais de um arquivo de OA encontrado para o relé '{relay_model}'.",
             status_code=409,
-            detalhes=f"Arquivos conflitantes: {', '.join(arquivos)}. Mantenha apenas um por tipo."
+            details=f"Arquivos conflitantes: {', '.join(files)}. Mantenha apenas um por tipo."
         )
 
 # PROCESSAMENTO
 class IncompatiblePairError(AppException):
-    """ Par de arquivos OA + IED incompatível """
-    def __init__(self, oa_file: str, ied_file: str, motivo: str = ""):
+    def __init__(self, oa_file: str, ied_file: str, details: str = ""):
         super().__init__(
-            mensagem=f"Incompatibilidade detectada entre '{oa_file}' e '{ied_file}'. {motivo}",
+            message=f"Incompatibilidade detectada entre '{oa_file}' e '{ied_file}'. {details}",
             status_code=400,
-            detalhes=motivo
+            details=details
         )
 
 class FileValidationError(AppException):
-    """ Validação falhou """
-    def __init__(self, nome_arquivo: str, motivo: str):
+    def __init__(self, filename: str, details: str):
         super().__init__(
-            mensagem=f"Validação falhou para '{nome_arquivo}': {motivo}",
+            message=f"Validação falhou para '{filename}': {details}",
             status_code=400,
-            nome_arquivo=nome_arquivo,
-            detalhes=motivo
+            filename=filename,
+            details=details
         )
 
 class FileProcessingError(AppException):
-    """ Processamento do arquivo falhou """
-    def __init__(self, nome_arquivo: str, erro_original: str):
+    def __init__(self, filename: str, details: str):
         super().__init__(
-            mensagem=f"Erro inesperado ao processar '{nome_arquivo}'.",
+            message=f"Erro inesperado ao processar '{filename}'.",
             status_code=500,
-            nome_arquivo=nome_arquivo,
-            detalhes=erro_original
+            filename=filename,
+            details=details
         )
 
 class ProcessingTimeoutError(AppException):
-    """ Processamento excedeu tempo limite """
-    def __init__(self, tempo_limite: str):
+    def __init__(self, time_limit: str):
         super().__init__(
-            mensagem=f"O processamento excedeu o tempo limite de {tempo_limite}.",
+            message=f"O processamento excedeu o tempo limite de {time_limit}.",
             status_code=408,
         )
 
 class EngineeringRuleError(AppException):
-    """
-    Violação de regra da empresa (VBs, Datasets, MACs).
-    """
-    def __init__(self, regra: str, causa: str, nome_arquivo: Optional[str] = None):
+    def __init__(self, rule: str, details: str, filename: str | None = None):
         super().__init__(
-            mensagem=f"Violação de regra de engenharia ({regra}): {causa}",
+            message=f"Violação de regra de engenharia ({rule}): {details}",
             status_code=400,
-            nome_arquivo=nome_arquivo,
-            detalhes=causa
+            filename=filename,
+            details=details
         )

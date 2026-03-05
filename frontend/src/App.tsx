@@ -11,7 +11,15 @@ import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 
 const ProtectedRoute = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="bg-background flex h-screen items-center justify-center">
+        <div className="border-eq-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -40,12 +48,12 @@ const PrivateLayout = () => {
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="login" element={<LoginPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<PrivateLayout />}>
           <Route index element={<ImportPage />} />
-          <Route path="resultados" element={<ResultPage />} />
+          <Route path="results" element={<ResultPage />} />
           <Route path="logs" element={<LogPage />} />
           <Route path="topologies" element={<TopologyPage />} />
         </Route>

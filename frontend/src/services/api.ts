@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import type { BackendError } from "../types/error";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api`;
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -8,10 +9,37 @@ export const api = axios.create({
 });
 
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    return Promise.reject(error);
+  (response) => response,
+  (error: AxiosError<BackendError>) => {
+    if (error.response && error.response.data) {
+      const data = error.response.data;
+
+      const errorTitle = data.error || "Erro";
+      const errorMessage = data.message || data.details || "Falha na operação";
+
+      console.error(
+        `[API ${error.response.status}]: ${errorTitle} - ${errorMessage}`,
+      );
+
+      // remover depois
+      if (data.details) {
+        console.debug("Detalhes da falha:", data.details);
+      }
+
+      return Promise.reject({
+        error: errorTitle,
+        message: errorMessage,
+        details: data.details,
+      });
+    }
+
+    const networkError: BackendError = {
+      error: "NetworkError",
+      message:
+        "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
+      path: error.config?.url,
+    };
+
+    return Promise.reject(networkError);
   },
 );

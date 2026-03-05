@@ -2,26 +2,32 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .exceptions import AppException
-from .database import engine, SessionLocal
-from .routers import logs, processamento, topologies, auth
-from . import models
+from fastapi.exceptions import RequestValidationError
 import traceback
 
+from .exceptions import AppException
+from .database import engine, SessionLocal
+from .routers import logs, parameter_validation, auth, topology_validation
+from .core.security import get_password_hash
+from .core.config import settings
+from . import models
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         models.Base.metadata.create_all(bind=engine)
+
+        master_reg = settings.MASTER_USER_REGISTRATION
         
-        user = db.query(models.User).filter(models.User.registration == "A123").first()
+        user = db.query(models.User).filter(models.User.registration == master_reg).first()
         if not user:
             master_user = models.User(
-                registration="A123",
-                full_name="Danyelle Machado",
-                hashed_password="123456",
-                role="Admin"
+                registration=settings.MASTER_USER_REGISTRATION,
+                name=settings.MASTER_USER_NAME,
+                hashed_password=get_password_hash(settings.MASTER_USER_PASSWORD), 
+                role="Admin",
+                is_active=True
             )
             db.add(master_user)
             db.commit()
@@ -53,9 +59,9 @@ app.add_middleware(
 
 api_prefix = "/api"
 app.include_router(auth.router, prefix=api_prefix)
-app.include_router(processamento.router, prefix=api_prefix)
+app.include_router(parameter_validation.router, prefix=api_prefix)
 app.include_router(logs.router, prefix=api_prefix)
-app.include_router(topologies.router, prefix=api_prefix)
+app.include_router(topology_validation.router, prefix=api_prefix)
 
 @app.get("/")
 def root():
@@ -66,24 +72,25 @@ async def app_exception_handler(request: Request, exc: AppException):
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "erro": exc.__class__.__name__,
-            "mensagem": exc.mensagem,
-            "arquivo": getattr(exc, "nome_arquivo", None),
-            "detalhes": getattr(exc, "detalhes", None),
-            "caminho": str(request.url.path)
+            "error": exc.__class__.__name__,
+            "message": exc.message,
+            "filename": exc.filename,
+            "details": exc.details,
+            "path": str(request.url.path)
         },
     )
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception): 
-    print(f"ERRO NÃO TRATADO: {exc}")
-    traceback.print_exc()
-
     return JSONResponse(
         status_code=500,
         content={
-            "erro": "InternalServerError",
-            "mensagem": "Erro interno do servidor. Tente novamente mais tarde.",
-            "caminho": str(request.url.path)
+            "error": "InternalServerError",
+            "message": "Erro interno do servidor. Tente novamente mais tarde.",
+            "path": str(request.url.path)
         }
     )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})

@@ -1,30 +1,38 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { type IedSlotData } from "../features/importacao/components/ImportSection";
+import { type IedSlotData } from "../features/import/components/ImportSection";
+import { type BackendReport } from "../features/result/types";
+import { useNavigate } from "react-router-dom";
 
 interface ValidationContextData {
   oaFiles: File[];
   iedSlots: IedSlotData[];
-  reportResults: any | null;
+  reportResults: BackendReport | null;
 
   setOaFiles: React.Dispatch<React.SetStateAction<File[]>>;
   setIedSlots: React.Dispatch<React.SetStateAction<IedSlotData[]>>;
-  setReportResults: (data: any) => void;
+  setReportResults: React.Dispatch<React.SetStateAction<BackendReport | null>>;
 
   clearSession: () => void;
 }
 
-const ValidationContext = createContext({} as ValidationContextData);
+const ValidationContext = createContext<ValidationContextData | undefined>(
+  undefined,
+);
 
 export function ValidationProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+
   const [oaFiles, setOaFiles] = useState<File[]>([]);
   const [iedSlots, setIedSlots] = useState<IedSlotData[]>([]);
-  const [reportResults, setReportResults] = useState<any | null>(null);
+  const [reportResults, setReportResults] = useState<BackendReport | null>(
+    null,
+  );
 
   const clearSession = () => {
     setOaFiles([]);
     setIedSlots([]);
     setReportResults(null);
-    window.location.href = "/";
+    navigate("/");
   };
 
   return (
@@ -44,4 +52,12 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useValidation = () => useContext(ValidationContext);
+export const useValidation = () => {
+  const context = useContext(ValidationContext);
+  if (!context) {
+    throw new Error(
+      "useValidation deve ser usado dentro de um ValidationProvider",
+    );
+  }
+  return context;
+};

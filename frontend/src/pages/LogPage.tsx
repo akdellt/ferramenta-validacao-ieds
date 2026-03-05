@@ -1,19 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useValidation } from "../context/ValidationContext";
-import axios from "axios";
-import LogTable from "../features/log/LogTable";
-
-export interface HistoryLog {
-  id: number;
-  created_at: string;
-  substation: string;
-  relay_model: string;
-  filename_oa: string;
-  status: string;
-  user_id?: number | null;
-  result_json?: any;
-}
+import { api } from "../services/api";
+import LogTable, { type HistoryLog } from "../features/log/LogTable";
+import { ErrorBanner } from "../components/common/ErrorBanner";
+import { type BackendError } from "../types/error";
+import { type BackendReport } from "../features/result/types";
 
 function LogPage() {
   const navigate = useNavigate();
@@ -21,17 +13,16 @@ function LogPage() {
 
   const [logs, setLogs] = useState<HistoryLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<BackendError | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:8000/api/logs/");
+        const response = await api.get("/logs/");
         setLogs(response.data);
-      } catch (err) {
-        console.error("Erro ao buscar histórico:", err);
-        setError("Não foi possível carregar o histórico de validações.");
+      } catch (err: any) {
+        setApiError(err as BackendError);
       } finally {
         setLoading(false);
       }
@@ -41,19 +32,17 @@ function LogPage() {
   }, []);
 
   const handleViewDetails = (log: HistoryLog) => {
-    const dadosFormatados = {
-      resultados: [
+    const historicalReport: BackendReport = {
+      results: [
         {
-          rele_tipo: log.relay_model,
-          nome_arquivo_oa: log.filename_oa,
-          lista_parametros: log.result_json,
+          relay_model: log.relay_model,
+          parameters_list: log.result_json || [],
         },
       ],
     };
 
-    setReportResults(dadosFormatados);
-
-    navigate("/resultados");
+    setReportResults(historicalReport);
+    navigate("/results");
   };
 
   return (
@@ -64,11 +53,7 @@ function LogPage() {
 
       <div className="flex w-full items-center justify-between"></div>
 
-      {error && (
-        <div className="mb-4 rounded bg-red-100 p-4 text-center text-red-700">
-          {error}
-        </div>
-      )}
+      <ErrorBanner error={apiError} onClose={() => setApiError(null)} />
 
       {loading ? (
         <div className="flex justify-center py-20">

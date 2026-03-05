@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { type BackendError } from "../types/error";
+import { type User } from "../types/auth";
 import EQ from "../assets/EQ.svg";
 
 function LoginPage() {
@@ -11,29 +13,27 @@ function LoginPage() {
 
   const [registration, setRegistration] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [apiError, setApiError] = useState<BackendError | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
-    setError("");
+    setApiError(null);
     setIsLoading(true);
 
     try {
-      const response = await api.post("/api/auth/login", {
+      const response = await api.post("/auth/login", {
         registration: registration.toUpperCase(),
         password: password,
       });
 
-      const { registration: userRegistration, name } = response.data;
+      const userData: User = response.data;
 
-      login(userRegistration, name);
+      login(userData);
       navigate("/");
     } catch (err: any) {
-      const message =
-        err.response?.data?.detail || "Erro ao conectar com o servidor";
-      setError(message);
+      setApiError(err as BackendError);
     } finally {
       setIsLoading(false);
     }
@@ -56,9 +56,14 @@ function LoginPage() {
           Acesso Restrito
         </h2>
 
-        {error && (
-          <div className="text-error mb-4 rounded-md border border-red-100 bg-red-50 p-2 text-center text-xs font-bold">
-            {error}
+        {apiError && (
+          <div className="mb-4 rounded-md border border-red-100 bg-red-50 p-3 text-center transition-all">
+            <p className="text-error text-xs font-black uppercase">
+              {apiError.error || "Erro de Login"}
+            </p>
+            <p className="text-error text-[10px] font-medium">
+              {apiError.message}
+            </p>
           </div>
         )}
 
@@ -68,8 +73,8 @@ function LoginPage() {
               Matrícula
             </label>
             <input
-              id="matricula"
-              name="matricula"
+              id="registration"
+              name="registration"
               type="text"
               autoComplete="username"
               value={registration}

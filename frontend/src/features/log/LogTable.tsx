@@ -7,7 +7,8 @@ export interface HistoryLog {
   relay_model: string;
   filename_oa: string;
   status: string;
-  user_id?: number | null;
+  user_registration?: string | null;
+  result_json?: any;
 }
 
 interface LogTableProps {
@@ -78,12 +79,12 @@ function LogTable({ logs, onViewDetails }: LogTableProps) {
                 <td className="px-6 py-4 text-center">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      log.status === "SUCESSO" || log.status === "SUCCESS"
+                      log.status === "Conforme"
                         ? "text-success bg-bg-dashboard"
                         : "text-error bg-bg-dashboard"
                     }`}
                   >
-                    {log.status === "SUCCESS" ? "CONFORME" : "DIVERGENTE"}
+                    {log.status}
                   </span>
                 </td>
 

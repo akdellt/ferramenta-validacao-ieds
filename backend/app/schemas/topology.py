@@ -1,4 +1,3 @@
-from typing import Optional
 from enum import Enum
 from pydantic import BaseModel, computed_field
 
@@ -11,20 +10,20 @@ class TopologyType(str, Enum):
 
 # POSSÍVEIS CATEGORIAS DE ERRO
 class ErrorCategory(str, Enum):
-    INTEGRITY = "Integrity"       
+    CONSISTENCY = "Consistency"       
     COMMUNICATION = "Communication" 
     LOGIC = "Logic"
 
 
 # CLASSE BASE DE INFORMAÇÕES DOS ARQUIVOS DOS DATASETS
 class BaseScdElement(BaseModel):
-    ld_inst: Optional[str] = None
+    ld_inst: str | None = None
     prefix: str = ""
-    ln_class: Optional[str] = None
+    ln_class: str | None = None
     ln_inst: str = ""
-    do_name: Optional[str] = None
+    do_name: str | None = None
     da_name: str = ""
-    fc: Optional[str] = None
+    fc: str | None = None
 
     @computed_field
     @property
@@ -36,8 +35,8 @@ class BaseScdElement(BaseModel):
     
 # ESCUTAS DOS IEDS (INFORMAÇÕES DOS DADOS INSERIDOS)
 class ExtRefSchema(BaseScdElement):
-    listens_to: Optional[str] = None
-    virtual_bit: Optional[str] = None
+    listens_to: str | None = None
+    virtual_bit: str | None = None
 
 # INFORMAÇÕES DOS ARQUIVOS DOS DATASETS
 class FcdaSchema(BaseScdElement):
@@ -50,16 +49,16 @@ class DataSetSchema(BaseModel):
 
 # DADOS DE COMUNICAÇÃO DA IED
 class IedCommunicationSchema(BaseModel):
-    mac_address: Optional[str] = None
-    app_id: Optional[str] = None
-    vlan: Optional[str] = None
-    min_time: Optional[str] = None
-    max_time: Optional[str] = None
+    mac_address: str | None = None
+    app_id: str | None = None
+    vlan: str | None = None
+    min_time: str | None = None
+    max_time: str | None = None
 
 # ESTRUTURA DO IED
 class IedSchema(BaseModel):
     name: str
-    ied_type: Optional[str] = None
+    relay_model: str | None = None
     communication: IedCommunicationSchema
     datasets: list[DataSetSchema] = []
     inputs: list[ExtRefSchema] = []
@@ -73,18 +72,18 @@ class TopologyResponse(BaseModel):
 class ErrorDetail(BaseModel):
     category: ErrorCategory               
     message: str
-    device: Optional[str] = None   
-    related_to: Optional[str] = None             
-    publisher: Optional[str] = None    
-    subscriber: Optional[str] = None   
-    affected_signal: Optional[str] = None 
-    expected: Optional[str] = None
-    found: Optional[str] = None
+    device: str | None = None  
+    related_to: str | None = None            
+    publisher: str | None = None    
+    subscriber: str | None = None   
+    affected_signal: str | None = None
+    expected: str | None = None
+    found: str | None = None
 
 # INFORMAÇÕES DO IED
 class IedSummary(BaseModel):
     name: str
-    model: str
+    relay_model: str
     is_healthy: bool = True
     errors: list[ErrorDetail] = []
 
@@ -98,8 +97,8 @@ class ConnectionEdge(BaseModel):
 
 # CONTAGER DE TIPOS DE ERROS
 class ValidationSummary(BaseModel):
-    integrity_errors_count: int  
-    network_errors_count: int    
+    consistency_errors_count: int  
+    communication_errors_count: int    
     logic_errors_count: int     
     total_errors: int
 
@@ -109,8 +108,8 @@ class TopologyValidationResponse(BaseModel):
     scenario: TopologyType
     is_valid: bool
     summary: ValidationSummary
-    integrity_errors: list[ErrorDetail] = []
-    network_errors: list[ErrorDetail] = []
+    consistency_errors: list[ErrorDetail] = []
+    communication_errors: list[ErrorDetail] = []
     logic_errors: list[ErrorDetail] = []
     ied_summary: list[IedSummary]
     connection_map: list[ConnectionEdge]

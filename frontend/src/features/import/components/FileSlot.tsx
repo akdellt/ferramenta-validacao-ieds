@@ -2,22 +2,29 @@ import { Paperclip, FileText } from "lucide-react";
 import { useRef } from "react";
 import DeleteButton from "../../../components/common/DeleteButton";
 import FileInfo from "../../../components/common/FileInfo";
+import { FILE_CONFIG } from "../../../config/fileUpload";
 
 interface FileSlotProps {
-  iedNome: string;
-  arquivo?: File | null;
-  onFileSelect: (arquivo: File) => void;
+  relay_model: string;
+  file?: File | null;
+  onFileSelect: (file: File) => void;
   onRemove: () => void;
 }
 
-function FileSlot({ iedNome, arquivo, onFileSelect, onRemove }: FileSlotProps) {
+function FileSlot({
+  relay_model,
+  file,
+  onFileSelect,
+  onRemove,
+}: FileSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const tamanhoKB = arquivo ? (arquivo.size / 1024).toFixed(0) : "0";
-  const extensao = arquivo?.name.split(".").pop()?.toLowerCase() || "file";
-  const nomeArquivo = arquivo?.name.replace(/\.[^/.]+$/, "") || "";
+
+  const sizeKB = file ? (file.size / 1024).toFixed(0) : "0";
+  const extension = file?.name.split(".").pop()?.toLowerCase() || "file";
+  const filename_ied = file?.name.replace(/\.[^/.]+$/, "") || "";
 
   const handleClick = () => {
-    if (!arquivo) {
+    if (!file) {
       inputRef.current?.click();
     }
   };
@@ -32,12 +39,17 @@ function FileSlot({ iedNome, arquivo, onFileSelect, onRemove }: FileSlotProps) {
   return (
     <div className="border-eq-border mb-3 flex h-14 w-full overflow-hidden rounded-md border shadow-sm transition-shadow hover:shadow-md">
       <div className="border-eq-border flex w-36 shrink-0 items-center border-r bg-white px-4">
-        <span className="text-primary text-sm font-semibold">{iedNome}</span>
+        <span
+          className="text-primary text-sm font-semibold"
+          title={relay_model}
+        >
+          {relay_model}
+        </span>
       </div>
       <div
         onClick={handleClick}
         className={`flex flex-1 items-center justify-between px-4 transition-colors ${
-          arquivo
+          file
             ? "cursor-default bg-white"
             : "bg-eq-border hover:bg-eq-border/60 cursor-pointer"
         }`}
@@ -46,10 +58,10 @@ function FileSlot({ iedNome, arquivo, onFileSelect, onRemove }: FileSlotProps) {
           type="file"
           ref={inputRef}
           className="hidden"
-          accept=".txt"
+          accept={FILE_CONFIG.IED.accept}
           onChange={handleFileChange}
         />
-        {arquivo ? (
+        {file ? (
           <>
             <div className="flex items-center gap-2 overflow-hidden">
               <FileText
@@ -59,9 +71,9 @@ function FileSlot({ iedNome, arquivo, onFileSelect, onRemove }: FileSlotProps) {
               />
 
               <FileInfo
-                fileName={nomeArquivo}
-                extension={extensao}
-                sizeKB={tamanhoKB}
+                fileName={filename_ied}
+                extension={extension}
+                sizeKB={sizeKB}
                 layout="row"
               />
             </div>

@@ -2,14 +2,22 @@ import Card from "../../../components/common/Card";
 import DropzoneArea from "./DropzoneArea";
 import FileItem from "./FileItem";
 import FileSlot from "./FileSlot";
-import { FILE_CONFIG } from "../../../config/fileUpload";
+import { FILE_CONFIG, type FileType } from "../../../config/fileUpload";
+
+export interface IedSlotData {
+  id: string;
+  relay_model: string;
+  file: File | null;
+  filename_oa: string;
+  substation: string;
+}
 
 interface ImportSectionProps {
   title: string;
-  tipoArquivo: "OA" | "IED";
+  fileType: FileType;
 
-  arquivosOA?: File[];
-  slotsIED?: IedSlotData[];
+  oaFiles?: File[];
+  iedSlots?: IedSlotData[];
 
   onAddFiles?: (files: File[]) => void;
   onRemoveFile?: (id: number | string) => void;
@@ -17,29 +25,21 @@ interface ImportSectionProps {
   onError?: (msg: string, title?: string) => void;
 }
 
-export interface IedSlotData {
-  id: string;
-  nome: string;
-  arquivo: File | null;
-  nomeArquivo: string;
-  subestacao: string;
-}
-
 function ImportSection({
   title,
-  tipoArquivo,
-  arquivosOA = [],
-  slotsIED = [],
+  fileType,
+  oaFiles = [],
+  iedSlots = [],
   onAddFiles,
   onRemoveFile,
   onUpdateSlot,
   onError,
 }: ImportSectionProps) {
-  const config = FILE_CONFIG[tipoArquivo];
+  const config = FILE_CONFIG[fileType];
 
-  const handleDropzoneReceive = (arquivos: File[]) => {
+  const handleDropzoneReceive = (files: File[]) => {
     if (onAddFiles) {
-      onAddFiles(arquivos);
+      onAddFiles(files);
     }
   };
 
@@ -54,7 +54,7 @@ function ImportSection({
         />
       </div>
 
-      {tipoArquivo === "IED" ? (
+      {fileType === "IED" ? (
         <div className="my-6 flex shrink-0 items-center gap-4">
           <div className="h-px flex-1 bg-gray-200"></div>
           <span className="text-secondary shrink-0 text-xs">
@@ -72,18 +72,18 @@ function ImportSection({
         Arquivos importados
       </h4>
 
-      {tipoArquivo === "OA" ? (
+      {fileType === "OA" ? (
         <div className="custom-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-          {arquivosOA.length === 0 ? (
+          {oaFiles.length === 0 ? (
             <p className="py-8 text-center text-sm text-gray-400">
-              Nenhum arquivo importado
+              {config.emptyMessage}
             </p>
           ) : (
-            arquivosOA.map((file, index) => (
+            oaFiles.map((file, index) => (
               <FileItem
-                key={`arquivo-oa-${index}`}
-                arquivo={file}
-                onDelete={() => onRemoveFile && onRemoveFile(index)}
+                key={`oa-file-${index}`}
+                file={file}
+                onDelete={() => onRemoveFile?.(index)}
               />
             ))
           )}
@@ -101,20 +101,18 @@ function ImportSection({
 
           <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
             <div className="space-y-2">
-              {slotsIED.length === 0 ? (
+              {iedSlots.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-400">
                   Nenhum IED encontrado
                 </p>
               ) : (
-                slotsIED.map((slot) => (
+                iedSlots.map((slot) => (
                   <FileSlot
                     key={slot.id}
-                    iedNome={slot.nome}
-                    arquivo={slot.arquivo}
-                    onFileSelect={(f) =>
-                      onUpdateSlot && onUpdateSlot(slot.id, f)
-                    }
-                    onRemove={() => onRemoveFile && onRemoveFile(slot.id)}
+                    relay_model={slot.relay_model}
+                    file={slot.file}
+                    onFileSelect={(f) => onUpdateSlot?.(slot.id, f)}
+                    onRemove={() => onRemoveFile?.(slot.id)}
                   />
                 ))
               )}

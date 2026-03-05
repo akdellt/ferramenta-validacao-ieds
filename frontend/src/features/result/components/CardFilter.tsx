@@ -1,8 +1,10 @@
 import { FileText, CheckCircle, AlertCircle } from "lucide-react";
 
+export type FilterStatus = "total" | "conforme" | "divergente";
+
 interface CardFilterProps {
-  activeFilter: "total" | "conforme" | "divergente";
-  onFilterChange: (filtro: "total" | "conforme" | "divergente") => void;
+  activeFilter: FilterStatus;
+  onFilterChange: (filter: FilterStatus) => void;
   counts: {
     total: number;
     conforme: number;
@@ -20,7 +22,7 @@ function CardFilter({ activeFilter, onFilterChange, counts }: CardFilterProps) {
         onClick={() => onFilterChange("total")}
         className={`${baseClass} ${
           activeFilter === "total"
-            ? "bg-eq-secondary border-eq-primary hover:bg-eq-primary text-white shadow-md"
+            ? "bg-eq-secondary border-eq-primary hover:bg-eq-primary text-white shadow-inner"
             : "border-eq-border text-secondary hover:bg-bg-dashboard bg-white"
         }`}
       >
@@ -37,7 +39,7 @@ function CardFilter({ activeFilter, onFilterChange, counts }: CardFilterProps) {
         onClick={() => onFilterChange("conforme")}
         className={`${baseClass} ${
           activeFilter === "conforme"
-            ? "bg-success border-success/70 hover:bg-success/70 text-white shadow-md"
+            ? "bg-success border-success/70 hover:bg-success/70 text-white shadow-inner"
             : "border-eq-border text-secondary hover:bg-bg-dashboard bg-white"
         }`}
       >
@@ -54,7 +56,7 @@ function CardFilter({ activeFilter, onFilterChange, counts }: CardFilterProps) {
         onClick={() => onFilterChange("divergente")}
         className={`${baseClass} ${
           activeFilter === "divergente"
-            ? "bg-error border-error/70 hover:bg-error/70 text-white shadow-md"
+            ? "bg-error border-error/70 hover:bg-error/70 text-white shadow-inner"
             : "border-eq-border text-secondary hover:bg-bg-dashboard bg-white"
         }`}
       >

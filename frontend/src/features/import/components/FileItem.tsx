@@ -3,15 +3,15 @@ import DeleteButton from "../../../components/common/DeleteButton";
 import FileInfo from "../../../components/common/FileInfo";
 
 interface FileItemProps {
-  arquivo: File;
+  file: File;
   onDelete: () => void;
 }
 
-function FileItem({ arquivo, onDelete }: FileItemProps) {
-  const tamanhoKB = (arquivo.size / 1024).toFixed(1);
-  const extensao = arquivo.name.split(".").pop()?.toLowerCase() || "file";
+function FileItem({ file, onDelete }: FileItemProps) {
+  const sizeKB = (file.size / 1024).toFixed(1);
+  const extension = file.name.split(".").pop()?.toLowerCase() || "file";
 
-  const nomeArquivo = arquivo.name.replace(/\.[^/.]+$/, "");
+  const filename_oa = file.name.replace(/\.[^/.]+$/, "");
 
   return (
     <div className="border-eq-border mb-3 flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm transition-all last:mb-0 hover:shadow-md">
@@ -21,9 +21,9 @@ function FileItem({ arquivo, onDelete }: FileItemProps) {
         </div>
 
         <FileInfo
-          fileName={nomeArquivo}
-          extension={extensao}
-          sizeKB={tamanhoKB}
+          fileName={filename_oa}
+          extension={extension}
+          sizeKB={sizeKB}
           layout="column"
         />
       </div>

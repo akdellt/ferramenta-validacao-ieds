@@ -1,11 +1,12 @@
 import { CloudUpload, Network, ShieldCheck, LogsIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useValidation } from "../context/ValidationContext";
 
 export const useSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { clearSession } = useValidation();
   const { logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -24,7 +25,7 @@ export const useSidebar = () => {
     {
       name: "Resultados",
       icon: <ShieldCheck size={32} />,
-      path: "/resultados",
+      path: "/results",
     },
     {
       name: "Histórico",
@@ -39,7 +40,7 @@ export const useSidebar = () => {
   };
 
   const toggleProfile = () => {
-    setIsProfileOpen(!isProfileOpen);
+    setIsProfileOpen((prev) => !prev);
   };
 
   const handleLogout = () => {
@@ -54,5 +55,6 @@ export const useSidebar = () => {
     isProfileOpen,
     toggleProfile,
     handleLogout,
+    currentPath: location.pathname,
   };
 };

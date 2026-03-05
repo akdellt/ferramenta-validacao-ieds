@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional, Any
 
 from sqlalchemy import String, ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSON
@@ -13,11 +12,11 @@ class User(Base):
     registration: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String)
     
-    full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
-    role: Mapped[str] = mapped_column(String, default="técnico")
+    role: Mapped[str] = mapped_column(String, default="Tecnico")
 
-    logs: Mapped[List["ValidationLog"]] = relationship(back_populates="owner")
+    logs: Mapped[list["ValidationLog"]] = relationship(back_populates="owner")
 
 class ValidationLog(Base):
     __tablename__ = "validation_logs"
@@ -30,13 +29,13 @@ class ValidationLog(Base):
     filename_oa: Mapped[str] = mapped_column(String)
     filename_ied: Mapped[str] = mapped_column(String)
 
-    result_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    result_json: Mapped[list[dict[str, object]]] = mapped_column(JSON)
     
-    status: Mapped[str] = mapped_column(String, default="Conforme")
+    status: Mapped[str] = mapped_column(String, default="Divergente")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     
-    user_registration: Mapped[Optional[str]] = mapped_column(
+    user_registration: Mapped[str | None] = mapped_column(
         String, ForeignKey("users.registration"), nullable=True
     )
     
-    owner: Mapped[Optional["User"]] = relationship(back_populates="logs")
+    owner: Mapped["User | None"] = relationship(back_populates="logs")

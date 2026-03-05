@@ -2,69 +2,73 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { useValidation } from "../context/ValidationContext";
 
-import CardFilter from "../features/resultado/components/CardFilter";
-import DropdownFilter from "../features/resultado/components/DropdownFilter";
-import ResultTable, {
-  type ParametroTabela,
-} from "../features/resultado/components/ResultTable";
+import CardFilter, {
+  type FilterStatus,
+} from "../features/result/components/CardFilter";
+import DropdownFilter from "../features/result/components/DropdownFilter";
+import ResultTable from "../features/result/components/ResultTable";
 
 import type {
-  RelatorioBackend,
-  ParametroBackend,
-  ResultadoIED,
-} from "../features/resultado/types";
+  BackendReport,
+  Parameter,
+  IedResult,
+} from "../features/result/types";
 
 function ResultPage() {
   const navigate = useNavigate();
   const { reportResults } = useValidation();
-  const relatorio = reportResults as RelatorioBackend | undefined;
 
-  const [iedSelecionado, setIedSelecionado] = useState<string | null>(null);
+  const report = reportResults as BackendReport | undefined;
 
-  const possuiDivergencias = relatorio?.resultados.some((ied) =>
-    ied.lista_parametros.some((p) =>
-      ["Divergente", "Não encontrado"].includes(p.status),
-    ),
+  const [selectedIed, setSelectedIed] = useState<string | null>(null);
+
+  const hasDivergences = useMemo(() => {
+    return report?.results.some(
+      (ied) =>
+        ied.parameters_list?.some((p) =>
+          ["Divergente", "Não encontrado"].includes(p.status),
+        ) ?? false,
+    );
+  }, [report]);
+
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>(
+    hasDivergences ? "divergente" : "total",
   );
-
-  const [filtroStatus, setFiltroStatus] = useState<
-    "total" | "conforme" | "divergente"
-  >(possuiDivergencias ? "divergente" : "total");
 
   useEffect(() => {
-    if (!relatorio) {
+    if (!report) {
       navigate("/");
     }
-  }, [relatorio, navigate]);
+  }, [report, navigate]);
 
-  if (!relatorio) return null;
+  if (!report) return null;
 
-  const nomesIeds = relatorio.resultados.map((r: ResultadoIED) => r.rele_tipo);
+  const iedNames = report.results.map((r) => r.relay_model);
 
-  const iedsVisiveis = relatorio.resultados.filter((ied: ResultadoIED) =>
-    iedSelecionado ? ied.rele_tipo === iedSelecionado : true,
+  const visibleIeds = report.results.filter((ied) =>
+    selectedIed ? ied.relay_model === selectedIed : true,
   );
 
-  const metricas = useMemo(() => {
+  const metrics = useMemo(() => {
     let total = 0;
     let conforme = 0;
     let divergente = 0;
 
-    const statusNegativos = ["Divergente", "Não encontrado"];
+    const negativeStatus = ["Divergente", "Não encontrado"];
 
-    iedsVisiveis.forEach((ied: ResultadoIED) => {
-      ied.lista_parametros.forEach((p: ParametroBackend) => {
+    visibleIeds.forEach((ied) => {
+      ied.parameters_list?.forEach((p) => {
         total++;
         if (p.status === "Conforme") {
           conforme++;
-        } else if (statusNegativos.includes(p.status)) {
+        } else if (negativeStatus.includes(p.status)) {
           divergente++;
         }
       });
     });
 
     return { total, conforme, divergente };
-  }, [iedsVisiveis]);
+  }, [visibleIeds]);
 
   return (
     <div className="mx-auto w-full max-w-400 px-8 py-12">
@@ -75,58 +79,44 @@ function ResultPage() {
       <div className="flex w-full items-center justify-between">
         <div className="w-72">
           <DropdownFilter
-            options={nomesIeds}
-            selected={iedSelecionado}
-            onSelect={setIedSelecionado}
+            options={iedNames}
+            selected={selectedIed}
+            onSelect={setSelectedIed}
             placeholder="Todos os IEDs"
           />
         </div>
         <CardFilter
-          activeFilter={filtroStatus}
-          onFilterChange={setFiltroStatus}
-          counts={metricas}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          counts={metrics}
         />
       </div>
 
       <div className="bg-eq-border pt-0.5">
-        {iedsVisiveis.map((ied: ResultadoIED) => {
-          const parametrosFiltrados = ied.lista_parametros.filter(
-            (p: ParametroBackend) => {
-              if (filtroStatus === "total") return true;
-              if (filtroStatus === "divergente") {
+        {visibleIeds.map((ied: IedResult) => {
+          const filteredParameters = (ied.parameters_list ?? []).filter(
+            (p: Parameter) => {
+              if (statusFilter === "total") return true;
+              if (statusFilter === "divergente") {
                 return (
                   p.status === "Divergente" || p.status === "Não encontrado"
                 );
               }
-              return p.status.toLowerCase() === filtroStatus;
+              return p.status.toLowerCase() === statusFilter.toLowerCase();
             },
           );
 
-          if (parametrosFiltrados.length === 0) return null;
+          if (filteredParameters.length === 0) return null;
 
-          const dadosFormatados: ParametroTabela[] = parametrosFiltrados.map(
-            (p: ParametroBackend) => ({
-              id: crypto.randomUUID(),
-              grupo: p.grupo || "GERAL",
-              parametro: p.parametro,
-              descricao: p.descricao,
-              faixa: p.faixa_ajuste || "-",
-              valorRef: p.ajuste_referencia || "-",
-              valorLido: p.valor_atual || "-",
-              status: p.status,
-            }),
-          );
+          const iedData: IedResult = {
+            ...ied,
+            parameters_list: filteredParameters,
+          };
 
-          return (
-            <ResultTable
-              key={ied.rele_tipo}
-              iedNome={ied.rele_tipo}
-              parametros={dadosFormatados}
-            />
-          );
+          return <ResultTable key={ied.relay_model} data={iedData} />;
         })}
 
-        {metricas.total === 0 && (
+        {metrics.total === 0 && (
           <div className="border-eq-border bg-bg-dashboard text-secondary mt-10 rounded-lg border border-dashed p-10 text-center">
             Nenhum dado encontrado.
           </div>

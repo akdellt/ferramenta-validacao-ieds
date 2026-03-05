@@ -1,9 +1,17 @@
 import lxml.etree
-from app.schemas.topology import *
+from app.schemas.topology import (
+    DataSetSchema, FcdaSchema, TopologyType, TopologyResponse,
+    IedCommunicationSchema, ExtRefSchema, IedSchema, ConnectionEdge,
+    IedSummary, ErrorDetail
+)
+from app.exceptions import InvalidFileContentError, FileTooLargeError
+
+MAX_SCD_SIZE_BYTES: int = 50 * 1024 * 1024
+SCL_NS = {'scl': 'http://www.iec.ch/61850/2003/SCL'}
 
 # EXTRAI INFORMAÇÕES DOS DATASETS
-def extract_datasets(root_xml, ns) -> list[DataSetSchema]:
-    datasets = root_xml.xpath('.//scl:DataSet', namespaces=ns)
+def extract_datasets(ied_node: lxml.etree._Element, ns: dict) -> list[DataSetSchema]:
+    datasets = ied_node.xpath('.//scl:DataSet', namespaces=ns)
     dataset_list = []
 
     for dataset in datasets:
@@ -35,11 +43,8 @@ def extract_datasets(root_xml, ns) -> list[DataSetSchema]:
     return dataset_list
 
 # VERIFICA CENÁRIO DE TOPOLOGIA
-def verify_scenario_type(ied_types: list) -> TopologyType:
-    # SEL 2414 - PARALELISMO
-    # SEL 751 - SELETIVIDADE LÓGICA
-
-    unique_types = set(t for t in ied_types if t is not None)
+def verify_scenario_type(relay_model: list[str | None]) -> TopologyType:
+    unique_types = set(t for t in relay_model if t is not None)
 
     # CENÁRIO DE SELETIVIDADE LÓGICA
     if unique_types == {"SEL_751"}:
@@ -54,33 +59,41 @@ def verify_scenario_type(ied_types: list) -> TopologyType:
 
 # SALVA TODAS AS INFORMAÇÕES RELEVANTES DO PROJETO
 # NOME, IED, MAC, VLAN, MAX/MIN, APPID, DATASETS e EXTREFS
-def read_scd_file(content: bytes) -> TopologyResponse:
+def read_scd_file(content: bytes, filename: str) -> TopologyResponse:
+    if not content:
+        raise InvalidFileContentError(filename=filename, details="Arquivo vazio.")
+
+    if len(content) > MAX_SCD_SIZE_BYTES:
+        raise FileTooLargeError(
+            filename=filename,
+            max_size_mb=int(MAX_SCD_SIZE_BYTES / (1024 * 1024))
+        )
+    
     try:
         root = lxml.etree.fromstring(content)
         tree = lxml.etree.ElementTree(root)
-        ns = {'scl': 'http://www.iec.ch/61850/2003/SCL'}
 
-        ied_list = tree.xpath('//scl:IED', namespaces=ns)
+        ied_list = tree.xpath('//scl:IED', namespaces=SCL_NS)
         ied_objects = []
-        ied_types = []
+        ied_models = []
 
         # BUSCA NOMES E MODELOS DOS IEDS NA TOPOLOGIA
         for ied in ied_list:
             name = ied.get('name')
-            type = ied.get('type')
-            ied_types.append(type)
+            relay_model = ied.get('type')
+            ied_models.append(relay_model)
 
-            comm_block = tree.xpath(f'//scl:ConnectedAP[@iedName="{name}"]', namespaces=ns)
-            mac, app_id, vlan, min_time, max_time = None, None, None, None, None
+            comm_block = tree.xpath(f'//scl:ConnectedAP[@iedName="{name}"]', namespaces=SCL_NS)
 
+            mac = app_id = vlan = min_time = max_time = None
             # BUSCA DADOS DE COMUNICAÇÃO DO IED
             if comm_block:
                 cb = comm_block[0]
-                mac_tag = cb.xpath('.//scl:P[@type="MAC-Address"]', namespaces=ns)
-                vlan_tag = cb.xpath('.//scl:P[@type="VLAN-ID"]', namespaces=ns)
-                appid_tag = cb.xpath('.//scl:P[@type="APPID"]', namespaces=ns)
-                mintime_tag = cb.xpath('.//scl:MinTime', namespaces=ns)
-                maxtime_tag = cb.xpath('.//scl:MaxTime', namespaces=ns)
+                mac_tag = cb.xpath('.//scl:P[@type="MAC-Address"]', namespaces=SCL_NS)
+                vlan_tag = cb.xpath('.//scl:P[@type="VLAN-ID"]', namespaces=SCL_NS)
+                appid_tag = cb.xpath('.//scl:P[@type="APPID"]', namespaces=SCL_NS)
+                mintime_tag = cb.xpath('.//scl:MinTime', namespaces=SCL_NS)
+                maxtime_tag = cb.xpath('.//scl:MaxTime', namespaces=SCL_NS)
 
                 mac = mac_tag[0].text if mac_tag else None
                 vlan = vlan_tag[0].text if vlan_tag else None
@@ -97,7 +110,7 @@ def read_scd_file(content: bytes) -> TopologyResponse:
             )
 
             # BUSCA INPUTS DO IED
-            ext_refs = ied.xpath('.//scl:ExtRef', namespaces=ns)
+            ext_refs = ied.xpath('.//scl:ExtRef', namespaces=SCL_NS)
             inputs_schema_list = []
             
             for ext_ref in ext_refs:
@@ -119,28 +132,25 @@ def read_scd_file(content: bytes) -> TopologyResponse:
                     ))
 
             # MONTAGEM FINAL DO IED
-            ied_schema = IedSchema(
+            ied_objects.append(IedSchema(
                 name=name,
-                ied_type=type,
+                relay_model=relay_model,
                 communication=comm_schema,
-                datasets=extract_datasets(ied, ns),
+                datasets=extract_datasets(ied, SCL_NS),
                 inputs=inputs_schema_list
-            )
-
-            ied_objects.append(ied_schema)
-
-        # RETORNA CENÁRIO DO PROJETO
-        scenario_type = verify_scenario_type(ied_types) 
+            ))
 
         # RETORNO FINAL DA API
         response = TopologyResponse(
-            scenario=scenario_type,
+            scenario=verify_scenario_type(ied_models),
             ieds=ied_objects
         )
 
         return response
+    except lxml.etree.XMLSyntaxError as e:
+        raise InvalidFileContentError(filename=filename, details=f"Erro de sintaxe XML: {str(e)}")
     except Exception as e:
-        raise Exception(f"Falha no Parser XML: {str(e)}")
+        raise Exception(f"Erro interno no processamento de '{filename}': {str(e)}")
 
 # CRIA MAPA DE CONEXÃO ENTRE IEDS DO PROJETO
 def build_connection_map(ieds: list[IedSchema], logic_errors: list[ErrorDetail] = []) -> list[ConnectionEdge]:
@@ -156,9 +166,7 @@ def build_connection_map(ieds: list[IedSchema], logic_errors: list[ErrorDetail] 
                 
                 if key not in connections:
                     connections[key] = set()
-                
-                if signal not in connections[key]:
-                    connections[key].append(signal)
+                connections[key].add(signal)
 
     map_list = []
     for (src, dst), signals in connections.items():
@@ -188,7 +196,7 @@ def build_ied_summary(ieds: list[IedSchema], all_errors: list[ErrorDetail]) -> l
 
         summary_list.append(IedSummary(
             name=ied.name,
-            model=ied.ied_type if ied.ied_type else "Desconhecido",
+            relay_model=ied.relay_model if ied.relay_model else "Desconhecido",
             is_healthy=len(specific_errors) == 0,
             errors=specific_errors
         ))

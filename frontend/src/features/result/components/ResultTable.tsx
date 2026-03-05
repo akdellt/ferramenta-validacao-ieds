@@ -1,24 +1,16 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown, ChevronUp, Circle } from "lucide-react";
-import { type StatusValidacao } from "../types";
-
-export interface ParametroTabela {
-  id: string;
-  parametro: string;
-  descricao: string;
-  faixa: string;
-  valorRef: string;
-  valorLido: string;
-  status: StatusValidacao;
-  grupo: string;
-}
+import {
+  type IedResult,
+  type Parameter,
+  type ValidationStatus,
+} from "../types";
 
 interface ResultTableProps {
-  iedNome: string;
-  parametros: ParametroTabela[];
+  data: IedResult;
 }
 
-const getStatusWeight = (status: string) => {
+const getStatusWeight = (status: ValidationStatus): number => {
   switch (status) {
     case "Divergente":
     case "Não encontrado":
@@ -30,21 +22,24 @@ const getStatusWeight = (status: string) => {
   }
 };
 
-function ResultTable({ iedNome, parametros }: ResultTableProps) {
+function ResultTable({ data }: ResultTableProps) {
   const [isOpen, setIsOpen] = useState(true);
 
-  const grupos = parametros.reduce(
+  const { relay_model, parameters_list } = data;
+
+  const groupedParameters = parameters_list.reduce(
     (acc, item) => {
-      if (!acc[item.grupo]) {
-        acc[item.grupo] = [];
+      const groupName = item.group || "General";
+      if (!acc[groupName]) {
+        acc[groupName] = [];
       }
-      acc[item.grupo].push(item);
+      acc[groupName].push(item);
       return acc;
     },
-    {} as Record<string, ParametroTabela[]>,
+    {} as Record<string, Parameter[]>,
   );
 
-  const nomesGrupos = Object.keys(grupos);
+  const groupNames = Object.keys(groupedParameters);
 
   return (
     <div className="border-eq-border mb-6 w-full overflow-hidden rounded-b-lg border-2 bg-white shadow-sm">
@@ -53,7 +48,7 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
         className="border-eq-border hover:bg-eq-border/50 flex w-full items-center justify-between border-b bg-white px-6 py-4 transition-colors"
       >
         <span className="text-primary text-lg font-bold uppercase">
-          {iedNome}
+          {relay_model}
         </span>
         {isOpen ? (
           <ChevronUp className="text-primary" />
@@ -77,45 +72,45 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
             </thead>
 
             <tbody>
-              {nomesGrupos.map((nomeGrupo) => (
-                <>
+              {groupNames.map((groupName) => (
+                <React.Fragment key={groupName}>
                   <tr
-                    key={nomeGrupo}
+                    key={groupName}
                     className="border-eq-border bg-bg-dashboard border-t-2 border-b"
                   >
                     <td
                       colSpan={6}
                       className="text-primary px-6 py-2 font-bold tracking-wide uppercase"
                     >
-                      {nomeGrupo}
+                      {groupName}
                     </td>
                   </tr>
 
-                  {grupos[nomeGrupo]
+                  {groupedParameters[groupName]
                     .sort(
                       (a, b) =>
                         getStatusWeight(a.status) - getStatusWeight(b.status),
                     )
-                    .map((item) => (
+                    .map((item, index) => (
                       <tr
-                        key={item.id}
+                        key={`${relay_model}-${groupName}-${index}`}
                         className="border-eq-border hover:bg-eq-border/50 border-b last:border-0"
                       >
                         <td className="text-primary px-6 py-4 font-medium">
-                          {item.parametro}
+                          {item.parameter}
                         </td>
                         <td
                           className="text-primary px-6 py-4 font-medium"
-                          title={item.descricao}
+                          title={item.description}
                         >
-                          {item.descricao}
+                          {item.description}
                         </td>
                         <td className="text-primary px-6 py-4 text-right font-mono">
-                          {item.faixa}
+                          {item.setting_range}
                         </td>
 
                         <td className="text-primary px-6 py-4 text-right font-mono">
-                          {item.valorRef}
+                          {item.reference_value}
                         </td>
 
                         <td
@@ -125,7 +120,7 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
                               : "text-primary"
                           }`}
                         >
-                          {item.valorLido}
+                          {item.current_value}
                         </td>
 
                         <td className="px-6 py-4">
@@ -148,7 +143,7 @@ function ResultTable({ iedNome, parametros }: ResultTableProps) {
                         </td>
                       </tr>
                     ))}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

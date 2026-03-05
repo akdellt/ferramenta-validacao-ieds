@@ -1,6 +1,6 @@
 import { AlertCircle, X, FileWarning } from "lucide-react";
 import { useEffect } from "react";
-import { type BackendError } from "../../types";
+import { type BackendError } from "../../types/error";
 import Card from "./Card";
 
 interface ErrorBannerProps {
@@ -30,17 +30,17 @@ export function ErrorBanner({ error, onClose }: ErrorBannerProps) {
 
             <div className="flex flex-col gap-1">
               <h3 className="text-error text-lg font-semibold">
-                {error.detalhes || "Erro no Processamento"}
+                {error.details || "Erro no Processamento"}
               </h3>
               <p className="text-secondary whitespace-pre-wrap">
-                {error.mensagem}
+                {error.message}
               </p>
 
-              {error.arquivo && (
+              {error.filename && (
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <FileWarning size={16} className="text-secondary" />
                   <span className="text-primary rounded border border-red-400 bg-white px-2 py-0.5 font-mono">
-                    {error.arquivo}
+                    {error.filename}
                   </span>
                 </div>
               )}

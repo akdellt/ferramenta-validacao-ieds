@@ -3,7 +3,7 @@ import { Upload, Info } from "lucide-react";
 
 interface DropzoneAreaProps {
   onFilesReceived: (files: File[]) => void;
-  onError?: (mensagem: string, titulo?: string) => void;
+  onError?: (message: string, title?: string) => void;
   accept?: string;
   maxSizeMB?: number;
 }
@@ -39,14 +39,14 @@ function DropzoneArea({
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validarEEnviar(Array.from(e.dataTransfer.files));
+      validateAndUpload(Array.from(e.dataTransfer.files));
       e.dataTransfer.clearData();
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      validarEEnviar(Array.from(e.target.files));
+      validateAndUpload(Array.from(e.target.files));
       e.target.value = "";
     }
   };
@@ -60,30 +60,30 @@ function DropzoneArea({
       .join(", ");
   };
 
-  const validarEEnviar = (listaArquivos: File[]) => {
-    const arquivosInvalidos: { nome: string; motivo: string }[] = [];
+  const validateAndUpload = (fileList: File[]) => {
+    const invalidFiles: { name: string; reason: string }[] = [];
 
-    const arquivosValidos = listaArquivos.filter((file) => {
+    const validFiles = fileList.filter((file) => {
       const sizeInMB = file.size / (1024 * 1024);
 
       if (sizeInMB > maxSizeMB) {
-        arquivosInvalidos.push({
-          nome: file.name,
-          motivo: `Tamanho: ${sizeInMB.toFixed(2)}MB (máx. ${maxSizeMB}MB)`,
+        invalidFiles.push({
+          name: file.name,
+          reason: `Tamanho: ${sizeInMB.toFixed(2)}MB (máx. ${maxSizeMB}MB)`,
         });
         return false;
       }
 
       if (accept) {
-        const extensoesPermitidas = accept
+        const allowedExtensions = accept
           .split(",")
           .map((ext) => ext.trim().toLowerCase());
-        const extensaoArquivo = `.${file.name.split(".").pop()?.toLowerCase()}`;
+        const fileExtension = `.${file.name.split(".").pop()?.toLowerCase()}`;
 
-        if (!extensoesPermitidas.includes(extensaoArquivo)) {
-          arquivosInvalidos.push({
-            nome: file.name,
-            motivo: `Tipo não permitido (aceita: ${formatExtensions(accept)})`,
+        if (!allowedExtensions.includes(fileExtension)) {
+          invalidFiles.push({
+            name: file.name,
+            reason: `Tipo não permitido (aceita: ${formatExtensions(accept)})`,
           });
           return false;
         }
@@ -92,10 +92,10 @@ function DropzoneArea({
       return true;
     });
 
-    if (arquivosInvalidos.length > 0) {
+    if (invalidFiles.length > 0) {
       if (onError) {
-        const msg = arquivosInvalidos
-          .map((a) => `${a.nome}: ${a.motivo}`)
+        const msg = invalidFiles
+          .map((f) => `${f.name}: ${f.reason}`)
           .join("; ");
         onError(
           `Alguns arquivos foram rejeitados: ${msg}`,
@@ -104,8 +104,8 @@ function DropzoneArea({
       }
     }
 
-    if (arquivosValidos.length > 0) {
-      onFilesReceived(arquivosValidos);
+    if (validFiles.length > 0) {
+      onFilesReceived(validFiles);
     }
   };
 
@@ -147,7 +147,7 @@ function DropzoneArea({
       <div className="text-secondary/60 flex items-center gap-1.5 text-xs">
         <Info size={14} />
         <span>
-          Arquivo: {extensionsText} e tamanho máximo: {maxSizeMB}MB
+          Aceitos: {extensionsText} (Máx: {maxSizeMB}MB)
         </span>
       </div>
     </div>

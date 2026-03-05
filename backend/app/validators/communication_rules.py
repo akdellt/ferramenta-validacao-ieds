@@ -1,7 +1,7 @@
 from app.schemas.topology import TopologyResponse, ErrorDetail, ErrorCategory
 
-def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
-    network_errors = []
+def validate_communication_rules(topology: TopologyResponse) -> list[ErrorDetail]:
+    comm_errors = []
     mac_addresses = {}
     app_ids = {}
 
@@ -11,7 +11,7 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
         if mac is not None:
             if mac in mac_addresses:
                 first_ied = mac_addresses[mac]
-                network_errors.append(
+                comm_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.COMMUNICATION,
                         message=f"Endereço MAC duplicado detectado.",
@@ -28,7 +28,7 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
         vlan = ied.communication.vlan
         if vlan is not None:
             if vlan != "001":
-                network_errors.append(
+                comm_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.COMMUNICATION,
                         message=f"VLAN inválido.",
@@ -43,7 +43,7 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
         if app_id:
             if app_id in app_ids:
                 first_ied = app_ids[app_id]
-                network_errors.append(
+                comm_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.COMMUNICATION,
                         message=f"APPID duplicado detectado.",
@@ -61,7 +61,7 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
         if max_time:
             try:
                 if int(max_time) != 1000:
-                    network_errors.append(
+                    comm_errors.append(
                         ErrorDetail(
                             category=ErrorCategory.COMMUNICATION,
                             message="Max Time fora do padrão.",
@@ -78,7 +78,7 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
         if min_time:
             try:
                 if int(min_time) != 4:
-                    network_errors.append(
+                    comm_errors.append(
                         ErrorDetail(
                             category=ErrorCategory.COMMUNICATION,
                             message="Min Time fora do padrão.",
@@ -90,4 +90,4 @@ def validate_network_rules(topology: TopologyResponse) -> list[ErrorDetail]:
             except ValueError:
                 pass
                 
-    return network_errors
+    return comm_errors
