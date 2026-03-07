@@ -43,3 +43,17 @@ api.interceptors.response.use(
     return Promise.reject(networkError);
   },
 );
+
+export const iedService = {
+  getAllIeds: async () => {
+    const response = await api.get("/relays/network-ieds");
+    return response.data;
+  },
+};
+
+export const networkService = {
+  fetchIedData: async (iedId: number) => {
+    const response = await api.get(`/relays/search-network/${Number(iedId)}`);
+    return response.data;
+  },
+};

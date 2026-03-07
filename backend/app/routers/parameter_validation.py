@@ -1,9 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from collections.abc import Callable
+from sqlalchemy.orm import Session
+from app.database import get_db
 from app.schemas.parameters import *
-from app.services.parameter_parser import parse_oa_file, parse_ied_file
-from app.services.comparator import process_files
+from app.services.parameter_module.parameter_parser import parse_oa_file, parse_ied_file
+from app.services.parameter_module.comparator import process_files
+from app.services.network_module.ssh_client import search_ied
 from app.exceptions import InvalidFileFormatError
+from app.models import NetworkIED
+import json
 
 router = APIRouter(
     prefix="/relays", 
@@ -37,7 +42,7 @@ async def process_upload_files[T](
 
 # ROTA DE LER ARQUIVOS DO EXCEL
 @router.post("/read-oa", response_model=list[OAFilesData])
-async def ler_ordens_ajuste(files: list[UploadFile] = File(...)):
+async def read_oa_files(files: list[UploadFile] = File(...)):
     return await process_upload_files(
         files=files,
         valid_extensions=(".xlsx", ".xls"),
@@ -57,30 +62,73 @@ async def read_ied_files(files: list[UploadFile] = File(...)):
 
 # ROTA DE VALIDAR PARES
 @router.post("/validate-pairs", response_model=ValidationReport)
-async def validate_pairs(oa_list: list[UploadFile] = File(...), ied_list: list[UploadFile] = File(...)):
+async def validate_pairs(oa_list: list[UploadFile] = File(...), ied_data: str = Form(...)):
     
-    if len(oa_list) != len(ied_list):
+    try:
+        ied_json_list = json.loads(ied_data)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Formato de ied_data inválido.")
+
+    if len(oa_list) != len(ied_json_list):
         raise HTTPException(
             status_code=400, 
-            detail=f"Quantidade incompatível: Recebido {len(oa_list)} OAs e {len(ied_list)} IEDs."
+            detail=f"Quantidade incompatível: {len(oa_list)} OAs e {len(ied_json_list)} IEDs."
         )
 
     mounted_pairs = []
 
-    for oa_file, ied_file in zip(oa_list, ied_list):
+    for oa_file, ied_dict in zip(oa_list, ied_json_list):
         await oa_file.seek(0)
         oa_content = await oa_file.read()
         oa_data = parse_oa_file(oa_content, oa_file.filename or "sem_nome.xlsx")
 
-        await ied_file.seek(0)
-        ied_content = await ied_file.read()
-        ied_data = parse_ied_file(ied_content, ied_file.filename or "sem_nome.txt")
+        try:
+            ied_structured_data = IEDFilesData(**ied_dict) 
+        except Exception as e:
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Dados do IED incompatíveis com IEDFilesData: {str(e)}"
+            )
 
-        pair = FilePair(oa=oa_data, ied=ied_data)
+        pair = FilePair(oa=oa_data, ied=ied_structured_data)
         mounted_pairs.append(pair)
         
     full_set = FilePairSet(pairs=mounted_pairs)
-
     report = process_files(full_set)
     
     return report
+
+# ROTA DE BUSCAR DADOS PELA REDE
+@router.get("/search-network/{ied_id}", response_model=IEDFilesData)
+async def fetch_ied_from_network(ied_id: int, db: Session = Depends(get_db)):
+    ied = db.query(NetworkIED).filter(NetworkIED.id == ied_id).first()
+
+    if not ied:
+        raise HTTPException(
+            status_code=404,
+            detail=f"IED com id {ied_id} não encontrado."
+        )
+    
+    try:
+        raw_content, remote_filename = search_ied(ied)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Falha na comunicação com o IED: {str(e)}"
+        )
+    
+    try:
+        # MUDAR DEPOIS PRA NAME QUANDO DESCOBRIR COMO MELHOR VALIDAR PRA IEDS DE MESMO MODELO
+        parsed_data = parse_ied_file(raw_content.encode(), remote_filename)
+        return parsed_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro ao processar os dados recebidos do IED: {str(e)}"
+        )
+    
+# ROTA DE BUSCAR TODOS OS IPS DOS IEDS CADASTRADOS (MAPA DE IPS)
+@router.get("/network-ieds", response_model=list[NetworkIEDSchema])
+def get_all_network_ieds(db: Session = Depends(get_db)):
+    ieds = db.query(NetworkIED).all()
+    return ieds

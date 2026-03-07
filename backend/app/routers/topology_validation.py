@@ -3,11 +3,11 @@ import json
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from app.schemas.topology import TopologyType, ValidationSummary, TopologyValidationResponse, ValidationForm
-from app.services.topology_parser import read_scd_file, build_connection_map, build_ied_summary
+from app.services.topology_module.topology_parser import read_scd_file, build_connection_map, build_ied_summary
+from app.services.topology_module.consistency_check import validate_project_consistency
 from app.validators.communication_rules import validate_communication_rules
 from app.validators.logical_selectivity import validate_logical_selectivity
 from app.validators.parallelism import validate_parallelism
-from app.services.consistency_check import validate_project_consistency
 from app.exceptions import InvalidFileFormatError, EmptyFileError, InvalidFileContentError, FileProcessingError
 
 router = APIRouter(

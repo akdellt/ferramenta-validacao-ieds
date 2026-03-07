@@ -24,3 +24,26 @@ export interface ValidationResult {
   status: string;
   parameters_list: ValidationItem[];
 }
+
+export interface CurrentParameter {
+  parameter: string;
+  current_value: string;
+}
+
+export interface IedFileData {
+  name: string;
+  relay_model: string;
+  parameters: CurrentParameter[];
+  size?: number;
+  isNetwork?: boolean;
+  lastModified?: number;
+}
+
+export interface IedSlotData {
+  id: string;
+  relay_model: string;
+  file: IedFileData | null;
+  filename_oa: string;
+  substation: string;
+  iedId?: number;
+}

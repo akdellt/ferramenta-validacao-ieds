@@ -37,6 +37,16 @@ docker-compose up -d --build
 Veja as instruções em [backend/README.md](./backend/README.md)
 e [frontend/README.md](./frontend/README.md)
 
+### Teste de Rede (Simulação)
+
+Para liberar a busca de dados via SSH/SFTP de forma simulada no frontend, siga esses passos:
+
+1. Instale a biblioteca no ambiente virtual: `pip install paramiko`
+2. Em um terminal separado, execute o simulador:
+   ```bash
+   python mocks/server_ssh.py
+   ```
+
 ## Acessos rápidos
 
 - Frontend: http://localhost:5173
@@ -72,6 +82,7 @@ e [frontend/README.md](./frontend/README.md)
 ```
 ├── backend/
 ├── frontend/
+├── mocks/
 ├── docker-compose.yml
 └── .env.example
 ```
@@ -88,11 +99,11 @@ e [frontend/README.md](./frontend/README.md)
 
 ### Em desenvolvimento
 
+[x] Módulo de rede SSH/SFTP (simulação do sistema)
 [ ] Tela de formulário de subestação  
 [ ] Visualização gráfica dos erros de validação
 
 ### A implementar
 
-[ ] Módulo de rede (DNP3)  
 [ ] Formulário de referência dinâmico (usuário constrói circuito)  
 [ ] Responsividade das telas

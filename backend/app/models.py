@@ -18,6 +18,15 @@ class User(Base):
 
     logs: Mapped[list["ValidationLog"]] = relationship(back_populates="owner")
 
+class NetworkIED(Base):
+    __tablename__ = "network_ieds"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, unique=True)
+    relay_model: Mapped[str] = mapped_column(String) 
+    ip_address: Mapped[str] = mapped_column(String)
+    port: Mapped[int] = mapped_column(default=20000)
+
 class ValidationLog(Base):
     __tablename__ = "validation_logs"
 
@@ -33,6 +42,8 @@ class ValidationLog(Base):
     
     status: Mapped[str] = mapped_column(String, default="Divergente")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    validation_source: Mapped[str] = mapped_column(String, default="FILE")
     
     user_registration: Mapped[str | None] = mapped_column(
         String, ForeignKey("users.registration"), nullable=True

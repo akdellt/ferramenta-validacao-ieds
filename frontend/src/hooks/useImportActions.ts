@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../services/api";
+import { api, iedService } from "../services/api";
 import { useValidation } from "../context/ValidationContext";
 import { type BackendError } from "../types/error";
 import type { ValidationResult } from "../types/parameters";
-import { type IedSlotData } from "../features/import/components/ImportSection";
+import type { IedSlotData } from "../types/parameters";
+import { performIedMatch } from "../features/import/iedMatcher";
+import { networkService } from "../services/api";
 
 export function useImportActions() {
   const navigate = useNavigate();
@@ -16,6 +18,14 @@ export function useImportActions() {
 
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<BackendError | null>(null);
+  const [dbIeds, setDbIeds] = useState<any[]>([]);
+
+  useEffect(() => {
+    iedService
+      .getAllIeds()
+      .then((data) => setDbIeds(data))
+      .catch((err) => console.error("Erro ao carregar banco", err));
+  }, []);
 
   const handleLocalError = (
     message: string,
@@ -44,14 +54,10 @@ export function useImportActions() {
         try {
           const response = await api.post("/relays/read-oa", formData);
 
-          const slotsFromFile: IedSlotData[] = response.data.map(
-            (item: ValidationResult) => ({
-              id: crypto.randomUUID(),
-              relay_model: item.relay_model,
-              file: null,
-              filename_oa: file.name,
-              substation: item.substation,
-            }),
+          const slotsFromFile = performIedMatch(
+            response.data,
+            dbIeds,
+            file.name,
           );
 
           successSlots.push(...slotsFromFile);
@@ -110,6 +116,7 @@ export function useImportActions() {
     const successfulIdentifications: { file: File; data: any }[] = [];
     const readErrors: string[] = [];
     const unmatchedFiles: string[] = [];
+    const alreadyFilledFiles: string[] = [];
 
     await Promise.all(
       newFiles.map(async (file) => {
@@ -144,11 +151,22 @@ export function useImportActions() {
         );
 
         if (slotIndex !== -1) {
-          newSlots[slotIndex] = {
-            ...newSlots[slotIndex],
-            file: file,
-          };
-          anyFileAssociated = true;
+          if (newSlots[slotIndex].file === null) {
+            const fileWithData = {
+              name: file.name,
+              size: file.size,
+              parameters: data.parameters,
+              relay_model: data.relay_model,
+            };
+
+            newSlots[slotIndex] = {
+              ...newSlots[slotIndex],
+              file: fileWithData as any,
+            };
+            anyFileAssociated = true;
+          } else {
+            alreadyFilledFiles.push(file.name);
+          }
         } else {
           unmatchedFiles.push(file.name);
         }
@@ -158,6 +176,14 @@ export function useImportActions() {
     });
 
     const feedbackMessages: string[] = [...readErrors];
+
+    if (alreadyFilledFiles.length > 0) {
+      feedbackMessages.push(
+        alreadyFilledFiles.length === 1
+          ? `O arquivo "${alreadyFilledFiles[0]}" foi ignorado pois slot já está preenchido.`
+          : `Os arquivos [${alreadyFilledFiles.join(", ")}] foram ignorados pois slots já estão preenchidos.`,
+      );
+    }
 
     if (unmatchedFiles.length > 0) {
       feedbackMessages.push(
@@ -177,41 +203,111 @@ export function useImportActions() {
     setLoading(false);
   };
 
-  const handleUpdateIedSlot = async (id: string, file: File) => {
-    const targetSlot = iedSlots.find((s) => s.id === id);
-    if (!targetSlot) return;
-
-    setLoading(true);
+  const handleUpdateIedSlot = async (
+    id: string,
+    payload: File | string | string[],
+  ) => {
     setApiError(null);
 
+    if (id === "BATCH_SEARCH") {
+      const idsParaBuscar = payload as string[];
+      setLoading(true);
+
+      try {
+        let slotsAtualizados = [...iedSlots];
+
+        for (const slotId of idsParaBuscar) {
+          const slot = slotsAtualizados.find((s) => s.id === slotId);
+          if (slot?.iedId && !slot.file) {
+            try {
+              const networkData = await networkService.fetchIedData(slot.iedId);
+
+              const virtualFile = {
+                ...networkData,
+                name: networkData.filename || "set_1.txt",
+                size: 1024,
+                isNetwork: true,
+              };
+
+              slotsAtualizados = slotsAtualizados.map((s) =>
+                s.id === slotId ? { ...s, file: virtualFile } : s,
+              );
+            } catch (err) {
+              console.error(`Falha no IED ${slot.relay_model}`, err);
+              handleLocalError(
+                `Não foi possível conectar ao relé ${slot.relay_model}. Verifique o IP.`,
+                "Erro de Rede",
+              );
+            }
+          }
+        }
+
+        setIedSlots(slotsAtualizados);
+      } catch (err: any) {
+        setApiError(err);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const targetSlot = iedSlots.find((s) => s.id === id);
+    if (!targetSlot || targetSlot.file) return;
+
+    setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("files", file);
+      if (payload === "TRIGGER_NETWORK_SEARCH") {
+        if (!targetSlot.iedId) return;
+        const response = await networkService.fetchIedData(targetSlot.iedId);
 
-      const response = await api.post("/relays/read-ied", formData);
-      const identification = response.data[0];
+        const virtualFile = {
+          ...response,
+          name: response.filename || "set_1.txt",
+          size: 1024,
+          isNetwork: true,
+        };
 
-      if (!identification) {
-        handleLocalError(
-          `Não foi possível identificar o tipo de IED no arquivo "${file.name}".`,
-          "Arquivo Desconhecido",
+        setIedSlots((prev) =>
+          prev.map((slot) =>
+            slot.id === id ? { ...slot, file: virtualFile } : slot,
+          ),
         );
-        return;
-      }
+      } else {
+        const file = payload as File;
+        const formData = new FormData();
+        formData.append("files", file);
 
-      if (identification.relay_model !== targetSlot.relay_model) {
-        handleLocalError(
-          `Este slot espera um "${targetSlot.relay_model}", mas o arquivo é um "${identification.relay_model}".`,
-          "Conformidade de Modelo",
+        const response = await api.post("/relays/read-ied", formData);
+        const identification = response.data[0];
+
+        if (
+          !identification ||
+          identification.relay_model !== targetSlot.relay_model
+        ) {
+          handleLocalError(
+            `Incompatibilidade de modelo ou arquivo inválido.`,
+            "Erro de Validação",
+          );
+          return;
+        }
+
+        const fileWithParameters = {
+          name: file.name,
+          size: file.size,
+          parameters: identification.parameters,
+          relay_model: identification.relay_model,
+        };
+
+        setIedSlots((prev) =>
+          prev.map((slot) =>
+            slot.id === id
+              ? { ...slot, file: fileWithParameters as any }
+              : slot,
+          ),
         );
-        return;
       }
-
-      setIedSlots((prev) =>
-        prev.map((slot) => (slot.id === id ? { ...slot, file } : slot)),
-      );
     } catch (err: any) {
-      setApiError(err as BackendError);
+      setApiError(err);
     } finally {
       setLoading(false);
     }
@@ -239,16 +335,24 @@ export function useImportActions() {
     setLoading(true);
 
     const formData = new FormData();
+    const iedDataPayload: any[] = [];
 
     filledSlots.forEach((slot) => {
-      const iedFile = slot.file!;
+      const iedFile = slot.file as any;
       const oaFile = oaFiles.find((f) => f.name === slot.filename_oa);
 
       if (oaFile && iedFile) {
         formData.append("oa_list", oaFile);
-        formData.append("ied_list", iedFile);
+
+        iedDataPayload.push({
+          filename: iedFile.name || "rede_ied.txt",
+          relay_model: slot.relay_model,
+          parameters: iedFile.parameters || [],
+        });
       }
     });
+
+    formData.append("ied_data", JSON.stringify(iedDataPayload));
 
     try {
       const response = await api.post("/relays/validate-pairs", formData);
@@ -280,7 +384,10 @@ export function useImportActions() {
 
       navigate("/results");
     } catch (err: any) {
-      setApiError(err as BackendError);
+      setLoading(false);
+      setTimeout(() => {
+        setApiError(err as BackendError);
+      }, 10);
     } finally {
       setLoading(false);
     }

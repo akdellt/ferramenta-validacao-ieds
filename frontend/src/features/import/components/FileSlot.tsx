@@ -1,12 +1,13 @@
-import { Paperclip, FileText } from "lucide-react";
+import { Paperclip, FileText, Globe } from "lucide-react";
 import { useRef } from "react";
 import DeleteButton from "../../../components/common/DeleteButton";
 import FileInfo from "../../../components/common/FileInfo";
 import { FILE_CONFIG } from "../../../config/fileUpload";
+import type { IedFileData } from "../../../types/parameters";
 
 interface FileSlotProps {
   relay_model: string;
-  file?: File | null;
+  file?: IedFileData | null;
   onFileSelect: (file: File) => void;
   onRemove: () => void;
 }
@@ -19,9 +20,9 @@ function FileSlot({
 }: FileSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const sizeKB = file ? (file.size / 1024).toFixed(0) : "0";
-  const extension = file?.name.split(".").pop()?.toLowerCase() || "file";
-  const filename_ied = file?.name.replace(/\.[^/.]+$/, "") || "";
+  const sizeKB = file?.size ? (file.size / 1024).toFixed(0) : "0";
+  const extension = file?.name?.split(".").pop()?.toLowerCase() || "txt";
+  const filename_ied = file?.name?.replace(/\.[^/.]+$/, "") || "";
 
   const handleClick = () => {
     if (!file) {
@@ -64,11 +65,19 @@ function FileSlot({
         {file ? (
           <>
             <div className="flex items-center gap-2 overflow-hidden">
-              <FileText
-                size={20}
-                className="text-eq-secondary shrink-0"
-                strokeWidth={1.5}
-              />
+              {file?.isNetwork ? (
+                <Globe
+                  className="text-eq-secondary"
+                  size={20}
+                  strokeWidth={1.5}
+                />
+              ) : (
+                <FileText
+                  className="text-eq-secondary"
+                  size={20}
+                  strokeWidth={1.5}
+                />
+              )}
 
               <FileInfo
                 fileName={filename_ied}

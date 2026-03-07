@@ -8,5 +8,7 @@ class Settings:
     MASTER_USER_NAME: str = os.getenv("MASTER_USER_NAME", "ADMIN_EQUATORIAL")
     MASTER_USER_PASSWORD: str = os.getenv("MASTER_USER_PASSWORD", "mudar123")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./local_test.db")
+    IED_SSH_USER: str = os.getenv("IED_SSH_USER", "ACC")
+    IED_SSH_PASSWORD: str = os.getenv("IED_SSH_PASSWORD", "OTTER")
 
 settings = Settings()
