@@ -1,16 +1,16 @@
-import { CloudUpload, Network, ShieldCheck, LogsIcon } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CloudUpload, Network, ShieldCheck, LogsIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useValidation } from "../context/ValidationContext";
 
 export const useSidebar = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { clearSession } = useValidation();
+  const { clearSession } = useValidation(); // Operacional em inglês
   const { logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // Consolidação de todos os itens de menu
   const menuItems = [
     {
       name: "Importação",
@@ -25,7 +25,7 @@ export const useSidebar = () => {
     {
       name: "Resultados",
       icon: <ShieldCheck size={32} />,
-      path: "/results",
+      path: "/resultados",
     },
     {
       name: "Histórico",
@@ -40,7 +40,7 @@ export const useSidebar = () => {
   };
 
   const toggleProfile = () => {
-    setIsProfileOpen((prev) => !prev);
+    setIsProfileOpen(!isProfileOpen);
   };
 
   const handleLogout = () => {
@@ -49,12 +49,17 @@ export const useSidebar = () => {
     navigate("/login");
   };
 
+  const handleHelp = () => {
+    // Interação com o usuário em português
+    alert("Funcionalidade de ajuda: Em desenvolvimento.");
+  };
+
   return {
     menuItems,
-    handleClearData,
     isProfileOpen,
+    handleClearData,
     toggleProfile,
     handleLogout,
-    currentPath: location.pathname,
+    handleHelp,
   };
 };

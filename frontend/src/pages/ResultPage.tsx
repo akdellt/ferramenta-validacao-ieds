@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { useValidation } from "../context/ValidationContext";
 
+// Usando os caminhos que o seu VS Code indicou como corretos (pasta 'result')
 import CardFilter, {
   type FilterStatus,
 } from "../features/result/components/CardFilter";
@@ -18,12 +19,14 @@ function ResultPage() {
   const navigate = useNavigate();
   const { reportResults } = useValidation();
 
-  const report = reportResults as BackendReport | undefined;
+  // Resolvendo Erro 2352: Usamos 'unknown' como ponte para converter tipos sem sobreposição direta
+  const report = reportResults as unknown as BackendReport | undefined;
 
   const [selectedIed, setSelectedIed] = useState<string | null>(null);
 
+  // Verifica se há divergências para definir o estado inicial do filtro
   const hasDivergences = useMemo(() => {
-    return report?.results.some(
+    return report?.results?.some(
       (ied) =>
         ied.parameters_list?.some((p) =>
           ["Divergente", "Não encontrado"].includes(p.status),
@@ -76,7 +79,7 @@ function ResultPage() {
         RESULTADO DE VALIDAÇÕES
       </h1>
 
-      <div className="flex w-full items-center justify-between">
+      <div className="flex w-full items-center justify-between mb-8">
         <div className="w-72">
           <DropdownFilter
             options={iedNames}
@@ -92,7 +95,7 @@ function ResultPage() {
         />
       </div>
 
-      <div className="bg-eq-border pt-0.5">
+      <div className="bg-eq-border pt-0.5 space-y-4">
         {visibleIeds.map((ied: IedResult) => {
           const filteredParameters = (ied.parameters_list ?? []).filter(
             (p: Parameter) => {
@@ -118,7 +121,7 @@ function ResultPage() {
 
         {metrics.total === 0 && (
           <div className="border-eq-border bg-bg-dashboard text-secondary mt-10 rounded-lg border border-dashed p-10 text-center">
-            Nenhum dado encontrado.
+            Nenhum dado encontrado para os filtros selecionados.
           </div>
         )}
       </div>
