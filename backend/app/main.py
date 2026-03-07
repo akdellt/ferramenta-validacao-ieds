@@ -30,9 +30,24 @@ async def lifespan(app: FastAPI):
                 is_active=True
             )
             db.add(master_user)
-            db.commit()
+
+        ied_teste_nome = "02T2"
+        ied = db.query(models.NetworkIED).filter(models.NetworkIED.name == ied_teste_nome).first()
+        
+        if not ied:
+            test_ied = models.NetworkIED(
+                name=ied_teste_nome,
+                relay_model="SEL 2414",
+                ip_address="host.docker.internal",
+                port=2222
+            )
+            db.add(test_ied)
+
+        db.commit()
     except Exception as e:
+        db.rollback()
         print(f"Erro na inicialização: {e}")
+        traceback.print_exc()
     finally:
         db.close()
     

@@ -3,14 +3,7 @@ import DropzoneArea from "./DropzoneArea";
 import FileItem from "./FileItem";
 import FileSlot from "./FileSlot";
 import { FILE_CONFIG, type FileType } from "../../../config/fileUpload";
-
-export interface IedSlotData {
-  id: string;
-  relay_model: string;
-  file: File | null;
-  filename_oa: string;
-  substation: string;
-}
+import type { IedSlotData } from "../../../types/parameters";
 
 interface ImportSectionProps {
   title: string;
@@ -21,7 +14,7 @@ interface ImportSectionProps {
 
   onAddFiles?: (files: File[]) => void;
   onRemoveFile?: (id: number | string) => void;
-  onUpdateSlot?: (id: string, file: File) => void;
+  onUpdateSlot?: (id: string, file: File | string) => void;
   onError?: (msg: string, title?: string) => void;
 }
 
@@ -41,6 +34,19 @@ function ImportSection({
     if (onAddFiles) {
       onAddFiles(files);
     }
+  };
+
+  const handleFetchAllFromNetwork = () => {
+    const idsParaBuscar = iedSlots
+      .filter((s) => s.iedId && !s.file)
+      .map((s) => s.id);
+
+    if (idsParaBuscar.length === 0) {
+      onError?.("Nenhum equipamento disponível para busca.");
+      return;
+    }
+
+    onUpdateSlot?.("BATCH_SEARCH", idsParaBuscar as any);
   };
 
   return (
@@ -92,8 +98,9 @@ function ImportSection({
         <>
           <div className="mb-6 flex shrink-0 justify-center">
             <button
-              className="border-eq-secondary text-eq-secondary hover:bg-eq-secondary rounded-md border-2 px-6 py-2 text-sm font-medium transition-colors hover:text-white"
-              title="Funcionalidade em desenvolvimento"
+              onClick={handleFetchAllFromNetwork}
+              disabled={iedSlots.every((s) => !s.iedId)}
+              className="border-eq-secondary text-eq-secondary hover:bg-eq-secondary rounded-md border-2 px-6 py-2 text-sm font-medium transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               BUSCAR NA REDE
             </button>

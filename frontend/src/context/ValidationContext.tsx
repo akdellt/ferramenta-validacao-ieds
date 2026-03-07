@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { type IedSlotData } from "../features/import/components/ImportSection";
+import type { IedSlotData } from "../types/parameters";
 import { type BackendReport } from "../features/result/types";
 import { useNavigate } from "react-router-dom";
 

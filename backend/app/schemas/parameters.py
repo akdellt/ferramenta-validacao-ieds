@@ -59,3 +59,14 @@ class FilePair(BaseModel):
 # CONJUNTO DOS PARES DE ARQUIVOS DE IEDS
 class FilePairSet(BaseModel):
     pairs: list[FilePair]
+
+# ATRIBUTOS DOS IED BUSCADOS NA REDE
+class NetworkIEDSchema(BaseModel):
+    id: int
+    name: str
+    relay_model: str
+    ip_address: str
+    port: int
+
+    class Config:
+        from_attributes = True
