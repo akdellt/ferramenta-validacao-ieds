@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, CloudUpload } from "lucide-react";
+import { Plus, Trash2, CloudUpload, CheckCircle2, Settings2 } from "lucide-react";
 
 import { api } from "../services/api";
 import { useValidation } from "../context/ValidationContext";
 import { ErrorBanner } from "../components/common/ErrorBanner";
-
-/**
- * Operacional: Importação de tipos. 
- * Se o arquivo ../types ainda der erro 2307, verifique se ele possui 'export interface BackendError'
- */
 import type { BackendError } from "../types/error";
 
 interface Transformer {
@@ -18,13 +13,18 @@ interface Transformer {
   feeders: { id: string; name: string }[];
 }
 
+// Definição das topologias suportadas pelo Backend
+const SUPPORTED_TOPOLOGIES = [
+  { value: "PARALLELISM", label: "Paralelismo (Parallelism)" },
+  { value: "LOGICAL_SELECTIVITY_COUPLED", label: "Seletividade Lógica Acoplada (Coupled)" },
+  { value: "LOGICAL_SELECTIVITY_ISOLATED", label: "Seletividade Lógica Isolada (Isolated)" },
+  { value: "GENERIC", label: "Configuração Genérica (Generic)" },
+];
+
 function TopologyPage() {
   const navigate = useNavigate();
-  
-  // Bypass de tipagem para suportar múltiplas versões do Contexto (Inglês/Português)
   const validationContext = useValidation() as any;
 
-  // States: Operational English
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<BackendError | null>(null);
   const [topologyType, setTopologyType] = useState("");
@@ -34,7 +34,6 @@ function TopologyPage() {
     { id: crypto.randomUUID(), name: "", feeders: [] }
   ]);
 
-  // Interação: Mensagens em Português
   const handleLocalError = (msg: string, title: string = "Erro de Validação") => {
     setApiError({
       error: "ValidationError",
@@ -43,62 +42,65 @@ function TopologyPage() {
     });
   };
 
-  // Logic: Transformer Management
+  // --- Lógica de Gerenciamento ---
+
   const handleAddTransformer = () => {
-    setTransformers([...transformers, { id: crypto.randomUUID(), name: "", feeders: [] }]);
+    setTransformers(prev => [...prev, { id: crypto.randomUUID(), name: "", feeders: [] }]);
   };
 
   const handleRemoveTransformer = (id: string) => {
-    setTransformers(transformers.map(t => t.id === id ? null : t).filter(Boolean) as Transformer[]);
+    if (transformers.length > 1) {
+      setTransformers(prev => prev.filter(t => t.id !== id));
+    }
   };
 
   const handleUpdateTransformerName = (id: string, newName: string) => {
-    setTransformers(transformers.map(t => t.id === id ? { ...t, name: newName } : t));
+    setTransformers(prev => prev.map(t => t.id === id ? { ...t, name: newName } : t));
   };
 
-  // Logic: Feeder Management
   const handleAddFeeder = (transformerId: string) => {
-    setTransformers(transformers.map(t => {
-      if (t.id === transformerId) {
-        return { ...t, feeders: [...t.feeders, { id: crypto.randomUUID(), name: "" }] };
-      }
-      return t;
-    }));
+    setTransformers(prev => prev.map(t => 
+      t.id === transformerId 
+        ? { ...t, feeders: [...t.feeders, { id: crypto.randomUUID(), name: "" }] } 
+        : t
+    ));
   };
 
   const handleUpdateFeeder = (transformerId: string, feederId: string, value: string) => {
-    setTransformers(transformers.map(t => {
+    setTransformers(prev => prev.map(t => {
       if (t.id === transformerId) {
-        const newFeeders = t.feeders.map(f => f.id === feederId ? { ...f, name: value } : f);
-        return { ...t, feeders: newFeeders };
+        return {
+          ...t,
+          feeders: t.feeders.map(f => f.id === feederId ? { ...f, name: value } : f)
+        };
       }
       return t;
     }));
   };
 
   const handleRemoveFeeder = (transformerId: string, feederId: string) => {
-    setTransformers(transformers.map(t => {
-      if (t.id === transformerId) {
-        return { ...t, feeders: t.feeders.filter(f => f.id !== feederId) };
-      }
-      return t;
-    }));
+    setTransformers(prev => prev.map(t => 
+      t.id === transformerId 
+        ? { ...t, feeders: t.feeders.filter(f => f.id !== feederId) } 
+        : t
+    ));
   };
 
   /**
-   * Main Execution: Process technical validation
+   * Envia os dados para o Backend e redireciona para CIRCUITO
    */
   const handleProcessValidation = async () => {
     const isNamesValid = transformers.every(t => t.name.trim() !== "");
     
     if (!topologyType || !isNamesValid || !scdFile) {
-      handleLocalError("Preencha a topologia, os nomes dos transformadores e selecione o arquivo SCD.");
+      handleLocalError("Preencha a topologia, os nomes dos ativos e selecione o arquivo SCD.");
       return;
     }
 
+    // Regra de negócio: Paralelismo exige multi-transformadores
     if (topologyType === "PARALLELISM" && transformers.length < 2) {
-      handleLocalError("Para operação em Paralelismo, configure no mínimo 2 transformadores.", "Restrição Técnica");
-      return;
+        handleLocalError("A operação em PARALLELISM exige no mínimo 2 transformadores configurados.");
+        return;
     }
 
     setIsLoading(true);
@@ -108,7 +110,6 @@ function TopologyPage() {
       const formData = new FormData();
       formData.append("file", scdFile);
 
-      // Payload mapping for Python Backend
       const formPayload = {
         expected_topology: topologyType,
         transformers: transformers.map(t => ({
@@ -123,16 +124,15 @@ function TopologyPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Suporte para setReportResults (EN) ou setRelatorioResultados (PT)
       const updateContext = validationContext.setReportResults || validationContext.setRelatorioResultados;
       if (updateContext) updateContext(response.data);
       
-      navigate("/resultados");
+      navigate("/circuito");
       
     } catch (err: any) {
       setApiError(err.response?.data || { 
         erro: "NetworkError", 
-        mensagem: "Falha na comunicação com o servidor ao processar arquivo SCD." 
+        mensagem: "Erro ao processar validação técnica da topologia." 
       });
     } finally {
       setIsLoading(false);
@@ -140,126 +140,146 @@ function TopologyPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-1 flex-col items-center overflow-y-auto p-8 py-12">
-      <h1 className="text-primary mb-10 text-center text-3xl font-bold tracking-wide uppercase">
+    <div className="flex h-full w-full flex-1 flex-col items-center overflow-y-auto p-8 py-12 bg-slate-50">
+      <h1 className="text-primary mb-10 text-center text-3xl font-black tracking-tight uppercase">
         Configuração de Topologia
       </h1>
 
       <ErrorBanner error={apiError} onClose={() => setApiError(null)} />
 
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        {/* SEÇÃO: TIPO DE TOPOLOGIA */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col gap-2">
-          <label className="text-sm font-bold text-gray-600 uppercase">Tipo de Topologia</label>
+        
+        {/* SEÇÃO: SELEÇÃO DE TOPOLOGIA SUPORTADA */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-eq-primary">
+            <Settings2 size={18} />
+            <label className="text-xs font-bold uppercase tracking-widest">Modelo de Operação do Sistema</label>
+          </div>
           <select 
             value={topologyType}
             onChange={(e) => setTopologyType(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-eq-primary bg-gray-50"
+            className="w-full rounded-lg border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-eq-primary/20 focus:border-eq-primary bg-white transition-all font-semibold text-gray-700"
           >
-            <option value="">Selecione a configuração...</option>
-            <option value="RADIAL">Radial</option>
-            <option value="ANEL">Em Anel</option>
-            <option value="PARALLELISM">Paralelismo</option>
+            <option value="">Selecione a topologia alvo...</option>
+            {SUPPORTED_TOPOLOGIES.map(top => (
+                <option key={top.value} value={top.value}>{top.label}</option>
+            ))}
           </select>
         </div>
 
-        {/* LISTA DINÂMICA DE TRANSFORMADORES */}
+        {/* LISTA DE TRANSFORMADORES */}
         {transformers.map((transf, index) => (
-          <div key={transf.id} className="bg-white p-8 rounded-xl shadow-md border border-gray-100 animate-in fade-in duration-500">
+          <div key={transf.id} className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 animate-in fade-in slide-in-from-bottom-2">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-eq-primary uppercase">Transformador #{index + 1}</h2>
+              <h2 className="text-lg font-bold text-eq-primary flex items-center gap-2">
+                <span className="bg-eq-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">
+                  {index + 1}
+                </span>
+                TRANSFORMADOR / ATIVO
+              </h2>
               {transformers.length > 1 && (
                 <button 
                   onClick={() => handleRemoveTransformer(transf.id)} 
-                  className="text-red-500 hover:text-red-700 transition-colors"
+                  className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-full transition-all"
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={18} />
                 </button>
               )}
             </div>
 
-            <div className="flex flex-col gap-2 mb-6">
-              <label className="text-sm font-bold text-gray-600 uppercase">Identificação (Nome)</label>
-              <input 
-                type="text"
-                value={transf.name}
-                onChange={(e) => handleUpdateTransformerName(transf.id, e.target.value)}
-                placeholder="Ex: TR-01"
-                className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-eq-primary bg-gray-50 font-mono"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center border-t pt-4">
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Alimentadores Associados</span>
-                <button 
-                  onClick={() => handleAddFeeder(transf.id)} 
-                  className="text-xs font-bold text-eq-primary hover:underline"
-                >
-                  + ADICIONAR ALIMENTADOR
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase">Identificação (SCD Name)</label>
+                <input 
+                  type="text"
+                  value={transf.name}
+                  onChange={(e) => handleUpdateTransformerName(transf.id, e.target.value)}
+                  placeholder="Ex: TR01"
+                  className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-eq-primary bg-gray-50 font-mono text-sm"
+                />
               </div>
 
-              {transf.feeders.map((feeder, fIdx) => (
-                <div key={feeder.id} className="flex gap-2 items-center">
-                  <input 
-                    type="text"
-                    value={feeder.name}
-                    onChange={(e) => handleUpdateFeeder(transf.id, feeder.id, e.target.value)}
-                    className="flex-1 rounded-lg border border-gray-200 p-2 text-sm outline-none focus:border-eq-primary"
-                    placeholder={`Nome do alimentador ${fIdx + 1}`}
-                  />
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Alimentadores Associados</label>
                   <button 
-                    onClick={() => handleRemoveFeeder(transf.id, feeder.id)} 
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    onClick={() => handleAddFeeder(transf.id)} 
+                    className="text-[10px] font-black text-eq-primary hover:underline"
                   >
-                    <Trash2 size={16} />
+                    + ADICIONAR
                   </button>
                 </div>
-              ))}
+
+                <div className="space-y-2">
+                  {transf.feeders.map((feeder, fIdx) => (
+                    <div key={feeder.id} className="flex gap-2 items-center group">
+                      <input 
+                        type="text"
+                        value={feeder.name}
+                        onChange={(e) => handleUpdateFeeder(transf.id, feeder.id, e.target.value)}
+                        className="flex-1 rounded-lg border border-gray-200 p-2 text-sm outline-none focus:border-eq-primary"
+                        placeholder={`Nome do alimentador ${fIdx + 1}`}
+                      />
+                      <button 
+                        onClick={() => handleRemoveFeeder(transf.id, feeder.id)} 
+                        className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ))}
 
         <button 
           onClick={handleAddTransformer}
-          className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-bold hover:border-eq-primary hover:text-eq-primary transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold hover:border-eq-primary hover:text-eq-primary transition-all flex items-center justify-center gap-2 group"
         >
-          <Plus size={24} /> ADICIONAR NOVO TRANSFORMADOR
+          <Plus size={20} /> ADICIONAR NOVO ATIVO
         </button>
 
-        {/* ÁREA DE UPLOAD DE ARQUIVO SCD */}
-        <div className="bg-white p-8 rounded-xl shadow-md border-2 border-dashed border-eq-primary/30 flex flex-col items-center gap-4">
-          <h3 className="text-sm font-bold text-gray-600 uppercase">Arquivo de Engenharia (SCD / XML)</h3>
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-              <CloudUpload className={`w-10 h-10 mb-3 ${scdFile ? 'text-green-500' : 'text-gray-400'}`} />
-              <p className="mb-2 text-sm text-gray-500 font-semibold px-4">
-                {scdFile ? scdFile.name : "Clique para selecionar o arquivo SCD"}
-              </p>
-              <p className="text-xs text-gray-400">Suporte a arquivos IEC 61850 (.scd, .xml)</p>
-            </div>
-            <input 
-              type="file" 
-              className="hidden" 
-              accept=".scd,.xml" 
-              onChange={(e) => setScdFile(e.target.files?.[0] || null)} 
-            />
-          </label>
+        {/* UPLOAD SCD */}
+        <div className={`p-1 rounded-xl transition-all ${scdFile ? 'bg-green-100 shadow-inner' : ''}`}>
+          <div className={`bg-white p-8 rounded-xl shadow-sm border-2 border-dashed transition-all flex flex-col items-center gap-4 ${
+            scdFile ? 'border-green-500' : 'border-gray-300 hover:border-eq-primary/50'
+          }`}>
+            <label className="flex flex-col items-center justify-center w-full cursor-pointer">
+              <div className="flex flex-col items-center justify-center text-center">
+                {scdFile ? (
+                  <CheckCircle2 className="w-12 h-12 mb-3 text-green-500 animate-pulse" />
+                ) : (
+                  <CloudUpload className="w-12 h-12 mb-3 text-gray-300" />
+                )}
+                <p className={`mb-1 text-sm font-bold ${scdFile ? 'text-green-700' : 'text-gray-500'}`}>
+                  {scdFile ? scdFile.name : "Clique para selecionar o arquivo SCD"}
+                </p>
+                <p className="text-xs text-gray-400">Padronização IEC 61850 (.scd, .xml)</p>
+              </div>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".scd,.xml" 
+                onChange={(e) => setScdFile(e.target.files?.[0] || null)} 
+              />
+            </label>
+          </div>
         </div>
 
-        {/* BOTÃO DE SUBMISSÃO */}
+        {/* BOTÃO FINAL */}
         <div className="mt-10 flex justify-end">
           <button
             onClick={handleProcessValidation}
             disabled={isLoading || !topologyType || !scdFile}
-            className={`rounded-lg px-12 py-4 text-sm font-bold tracking-wider text-white shadow-lg transition-all ${
+            className={`rounded-xl px-16 py-5 text-sm font-black tracking-widest text-white shadow-xl transition-all ${
               isLoading || !topologyType || !scdFile
-                ? "bg-gray-400 cursor-not-allowed opacity-70"
-                : "bg-eq-primary hover:bg-eq-primary/90 cursor-pointer hover:-translate-y-1"
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-eq-primary hover:bg-eq-primary/90 hover:-translate-y-1 active:scale-95 shadow-eq-primary/20"
             }`}
           >
-            {isLoading ? "PROCESSANDO ENGENHARIA..." : "EXECUTAR VALIDAÇÃO TÉCNICA"}
+            {isLoading ? "PROCESSANDO ENGENHARIA..." : "INICIAR VALIDAÇÃO DE CIRCUITO"}
           </button>
         </div>
       </div>
