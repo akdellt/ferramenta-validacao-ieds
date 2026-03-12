@@ -10,9 +10,9 @@ class TopologyType(str, Enum):
 
 # POSSÍVEIS CATEGORIAS DE ERRO
 class ErrorCategory(str, Enum):
-    CONSISTENCY = "Consistency"       
-    COMMUNICATION = "Communication" 
-    LOGIC = "Logic"
+    CONSISTENCY = "Formulário"       
+    COMMUNICATION = "Comunicação" 
+    LOGIC = "Lógica"
 
 
 # CLASSE BASE DE INFORMAÇÕES DOS ARQUIVOS DOS DATASETS
@@ -24,14 +24,27 @@ class BaseScdElement(BaseModel):
     do_name: str | None = None
     da_name: str = ""
     fc: str | None = None
+    int_addr: str | None = None
+
+    src_ld_inst: str | None = None
+    src_ln_class: str | None = None
+    src_cb_name: str | None = None
 
     @computed_field
     @property
     def object_ref(self) -> str:
-        name = f"{self.ld_inst}/{self.prefix}{self.ln_class}{self.ln_inst}.{self.do_name}"
-        if self.da_name:
-            name += f".{self.da_name}"
-        return name
+        # Prioridade: Endereço Lógico Completo (Padrão)
+        if self.ld_inst and self.ln_class and self.do_name:
+            pref = self.prefix or ""
+            inst = self.ln_inst or ""
+            da = f".{self.da_name}" if self.da_name else ""
+            return f"{self.ld_inst}/{pref}{self.ln_class}{inst}.{self.do_name}{da}"
+
+        # Segunda opção: Referência de Bloco de Controle (GOOSE / SLBF)
+        if self.src_cb_name:
+            return f"ControlBlock/{self.src_cb_name}"
+
+        return "Unknown_Signal_Structure"
     
 # ESCUTAS DOS IEDS (INFORMAÇÕES DOS DADOS INSERIDOS)
 class ExtRefSchema(BaseScdElement):

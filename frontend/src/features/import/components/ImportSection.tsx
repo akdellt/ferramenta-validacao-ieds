@@ -1,9 +1,10 @@
 import Card from "../../../components/common/Card";
-import DropzoneArea from "./DropzoneArea";
+import DropzoneArea from "../../../components/common/DropzoneArea";
 import FileItem from "./FileItem";
 import FileSlot from "./FileSlot";
 import { FILE_CONFIG, type FileType } from "../../../config/fileUpload";
 import type { IedSlotData } from "../../../types/parameters";
+import { Button } from "../../../components/common/Button";
 
 interface ImportSectionProps {
   title: string;
@@ -97,13 +98,14 @@ function ImportSection({
       ) : (
         <>
           <div className="mb-6 flex shrink-0 justify-center">
-            <button
+            <Button
+              variant="outline"
               onClick={handleFetchAllFromNetwork}
               disabled={iedSlots.every((s) => !s.iedId)}
-              className="border-eq-secondary text-eq-secondary hover:bg-eq-secondary rounded-md border-2 px-6 py-2 text-sm font-medium transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="px-6 py-2 shadow-none"
             >
               BUSCAR NA REDE
-            </button>
+            </Button>
           </div>
 
           <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">

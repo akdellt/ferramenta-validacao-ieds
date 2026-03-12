@@ -158,6 +158,19 @@ def validate_selectivity_datasets(topology: TopologyResponse) -> list[ErrorDetai
             if not target or not expected_ref:
                 continue
 
+            if expected_ref.startswith("ControlBlock/"):
+                if target not in ied_dict:
+                    dataset_errors.append(ErrorDetail(
+                        category=ErrorCategory.LOGIC,
+                        message="IED publicador de sinal de controle não encontrado no projeto",
+                        publisher=target,
+                        subscriber=subscriber.name,
+                        affected_signal=expected_ref,
+                        expected="IED Presente",
+                        found="IED Ausente"
+                    ))
+                continue
+
             publisher = ied_dict.get(target)
             if not publisher:
                 dataset_errors.append(

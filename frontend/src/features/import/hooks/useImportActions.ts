@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { api, iedService } from "../services/api";
-import { useValidation } from "../context/ValidationContext";
-import { type BackendError } from "../types/error";
-import type { ValidationResult } from "../types/parameters";
-import type { IedSlotData } from "../types/parameters";
-import { performIedMatch } from "../features/import/iedMatcher";
-import { networkService } from "../services/api";
+import { useAuth } from "../../../context/AuthContext";
+import { api, iedService } from "../../../services/api";
+import { useValidation } from "../../../context/ValidationContext";
+import { type BackendError } from "../../../types/error";
+import type { ValidationResult } from "../../../types/parameters";
+import type { IedSlotData } from "../../../types/parameters";
+import { performIedMatch } from "../../../features/import/iedMatcher";
+import { networkService } from "../../../services/api";
 
 export function useImportActions() {
   const navigate = useNavigate();

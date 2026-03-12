@@ -1,4 +1,10 @@
-import { CloudUpload, Network, ShieldCheck, LogsIcon } from "lucide-react";
+import {
+  CloudUpload,
+  Network,
+  ShieldCheck,
+  LogsIcon,
+  Component,
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -19,13 +25,18 @@ export const useSidebar = () => {
     },
     {
       name: "Topologia",
-      icon: <Network size={32} />,
+      icon: <Component size={32} />,
       path: "/topologies",
     },
     {
       name: "Resultados",
       icon: <ShieldCheck size={32} />,
       path: "/results",
+    },
+    {
+      name: "Circuito",
+      icon: <Network size={32} />,
+      path: "/circuits",
     },
     {
       name: "Histórico",

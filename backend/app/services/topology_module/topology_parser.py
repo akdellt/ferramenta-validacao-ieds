@@ -128,7 +128,10 @@ def read_scd_file(content: bytes, filename: str) -> TopologyResponse:
                         ln_inst=ext_ref.get("lnInst", ""),
                         do_name=ext_ref.get("doName"),
                         da_name=ext_ref.get("daName", ""),
-                        fc=ext_ref.get("fc")
+                        fc=ext_ref.get("fc"),
+                        src_ld_inst=ext_ref.get("srcLDInst"),
+                        src_ln_class=ext_ref.get("srcLNClass"),
+                        src_cb_name=ext_ref.get("srcCBName")
                     ))
 
             # MONTAGEM FINAL DO IED

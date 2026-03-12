@@ -8,7 +8,7 @@ interface FileItemProps {
 }
 
 function FileItem({ file, onDelete }: FileItemProps) {
-  const sizeKB = (file.size / 1024).toFixed(1);
+  const sizeKB = file.size;
   const extension = file.name.split(".").pop()?.toLowerCase() || "file";
 
   const filename_oa = file.name.replace(/\.[^/.]+$/, "");
@@ -23,7 +23,7 @@ function FileItem({ file, onDelete }: FileItemProps) {
         <FileInfo
           fileName={filename_oa}
           extension={extension}
-          sizeKB={sizeKB}
+          sizeBytes={sizeKB}
           layout="column"
         />
       </div>
