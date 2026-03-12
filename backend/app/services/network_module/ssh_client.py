@@ -29,12 +29,12 @@ def search_ied(ied: NetworkIED) -> tuple[str, str]:
                 output = f.read().decode("ascii", errors="ignore").strip()
             
             sftp.close()
-            print(f"STATUS: Arquivo {remote_path} resgatado via SFTP.")
+            print(f"STATUS: Arquivo {remote_path} resgatado via SFTP")
             return output, "SET_1.txt"
 
         # TENTATIVA VIA SSH (DUMP DE DADOS)
         except Exception as sftp_error:
-            print(f"SFTP falhou ({sftp_error}). Tentando método SSH...")
+            print(f"SFTP falhou ({sftp_error}). Tentando método SSH")
 
             # ENVIA COMANDO DE BUSCA DE DADOS DAS CONIGURAÇÕES
             _, stdout, stderr = client.exec_command("TAR")
@@ -46,7 +46,7 @@ def search_ied(ied: NetworkIED) -> tuple[str, str]:
                 raise Exception(f"Erro retornado pelo IED {ied.name}: {error}")
             
             if not output:
-                raise Exception("IED não retornou dados nem via SFTP nem via SSH.")
+                raise Exception("IED não retornou dados nem via SFTP nem via SSH")
                 
             return output, "SET_1_DUMP.txt"
 

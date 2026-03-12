@@ -20,7 +20,7 @@ function FileSlot({
 }: FileSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const sizeKB = file?.size ? (file.size / 1024).toFixed(0) : "0";
+  const sizeKB = file?.size ? file.size / 1024 : 0;
   const extension = file?.name?.split(".").pop()?.toLowerCase() || "txt";
   const filename_ied = file?.name?.replace(/\.[^/.]+$/, "") || "";
 
@@ -82,7 +82,7 @@ function FileSlot({
               <FileInfo
                 fileName={filename_ied}
                 extension={extension}
-                sizeKB={sizeKB}
+                sizeBytes={sizeKB}
                 layout="row"
               />
             </div>

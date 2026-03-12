@@ -6,6 +6,7 @@ import ResultPage from "./pages/ResultPage";
 import LoginPage from "./pages/LoginPage";
 import LogPage from "./pages/LogPage";
 import TopologyPage from "./pages/TopologyPage";
+import CircuitsPage from "./pages/CircuitsPage";
 
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
@@ -56,6 +57,7 @@ function App() {
           <Route path="results" element={<ResultPage />} />
           <Route path="logs" element={<LogPage />} />
           <Route path="topologies" element={<TopologyPage />} />
+          <Route path="circuits" element={<CircuitsPage />} />
         </Route>
       </Route>
 

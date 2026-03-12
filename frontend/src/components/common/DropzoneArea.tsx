@@ -1,21 +1,59 @@
 import { useRef, useState } from "react";
-import { Upload, Info } from "lucide-react";
+import { Upload, Info, FileText, X } from "lucide-react";
+import FileInfo from "./FileInfo";
 
 interface DropzoneAreaProps {
   onFilesReceived: (files: File[]) => void;
+  onClearFile?: () => void;
   onError?: (message: string, title?: string) => void;
   accept?: string;
   maxSizeMB?: number;
+  multiple?: boolean;
+  currentFile?: File | null;
 }
 
 function DropzoneArea({
   onFilesReceived,
+  onClearFile,
   onError,
   accept,
   maxSizeMB = 5,
+  multiple = true,
+  currentFile = null,
 }: DropzoneAreaProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  if (!multiple && currentFile) {
+    const fileName = currentFile.name.split(".").slice(0, -1).join(".");
+    const extension = currentFile.name.split(".").pop() || "";
+    const sizeKB = currentFile.size;
+
+    return (
+      <div className="bg-eq-secondary/20 border-eq-secondary flex w-full items-center justify-between rounded-lg border-2 p-4">
+        <div className="flex items-center gap-3">
+          <div className="text-eq-secondary bg-eq-secondary/20 rounded-full p-2">
+            <FileText size={24} />
+          </div>
+          <FileInfo
+            fileName={fileName}
+            extension={extension}
+            sizeBytes={sizeKB}
+            layout="column"
+          />
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onClearFile) onClearFile();
+          }}
+          className="hover:text-eq-secondary hover:bg-eq-secondary/20 rounded-full p-1 text-gray-400 transition-colors"
+        >
+          <X size={20} />
+        </button>
+      </div>
+    );
+  }
 
   const handleClick = () => {
     inputRef.current?.click();
@@ -39,7 +77,8 @@ function DropzoneArea({
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validateAndUpload(Array.from(e.dataTransfer.files));
+      const files = Array.from(e.dataTransfer.files);
+      validateAndUpload(multiple ? files : [files[0]]);
       e.dataTransfer.clearData();
     }
   };

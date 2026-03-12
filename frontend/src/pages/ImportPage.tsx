@@ -1,6 +1,7 @@
-import { useImportActions } from "../hooks/useImportActions";
+import { useImportActions } from "../features/import/hooks/useImportActions";
 import { ErrorBanner } from "../components/common/ErrorBanner";
 import ImportSection from "../features/import/components/ImportSection";
+import { Button } from "../components/common/Button";
 
 function ImportPage() {
   const {
@@ -48,17 +49,13 @@ function ImportPage() {
         </div>
 
         <div className="mt-10 flex justify-end">
-          <button
+          <Button
             onClick={handleVerify}
-            disabled={loading || !iedSlots.some((s) => s.file)}
-            className={`rounded-lg px-12 py-3 text-sm font-bold tracking-wider text-white shadow-lg transition-all ${
-              loading || !iedSlots.some((s) => s.file)
-                ? "cursor-not-allowed bg-gray-400 opacity-70"
-                : "bg-eq-primary hover:bg-eq-primary/90 cursor-pointer"
-            } `}
+            isLoading={loading}
+            disabled={!iedSlots.some((s) => s.file)}
           >
-            {loading ? "PROCESSANDO..." : "VERIFICAR"}
-          </button>
+            VERIFICAR
+          </Button>
         </div>
       </div>
     </div>

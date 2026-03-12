@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { IedSlotData } from "../types/parameters";
-import { type BackendReport } from "../features/result/types";
+import type {
+  TopologyValidationResponse,
+  Transformer,
+} from "../features/topology/types";
+import type { BackendReport } from "../features/result/types";
 import { useNavigate } from "react-router-dom";
 
 interface ValidationContextData {
@@ -8,9 +12,25 @@ interface ValidationContextData {
   iedSlots: IedSlotData[];
   reportResults: BackendReport | null;
 
+  topologyType: string;
+  scdFile: File | null;
+
+  topologyReport: TopologyValidationResponse | null;
+  transformers: Transformer[];
+  isLoading: boolean;
+
   setOaFiles: React.Dispatch<React.SetStateAction<File[]>>;
   setIedSlots: React.Dispatch<React.SetStateAction<IedSlotData[]>>;
   setReportResults: React.Dispatch<React.SetStateAction<BackendReport | null>>;
+
+  setTopologyType: (type: string) => void;
+  setScdFile: (file: File | null) => void;
+
+  setTopologyReport: React.Dispatch<
+    React.SetStateAction<TopologyValidationResponse | null>
+  >;
+  setTransformers: React.Dispatch<React.SetStateAction<Transformer[]>>;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 
   clearSession: () => void;
 }
@@ -28,10 +48,22 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
     null,
   );
 
+  const [topologyType, setTopologyType] = useState("");
+  const [scdFile, setScdFile] = useState<File | null>(null);
+
+  const [topologyReport, setTopologyReport] =
+    useState<TopologyValidationResponse | null>(null);
+  const [transformers, setTransformers] = useState<Transformer[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const clearSession = () => {
     setOaFiles([]);
     setIedSlots([]);
     setReportResults(null);
+    setTopologyReport(null);
+    setTransformers([]);
+    setTopologyType("");
+    setScdFile(null);
     navigate("/");
   };
 
@@ -44,6 +76,16 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
         setIedSlots,
         reportResults,
         setReportResults,
+        topologyReport,
+        setTopologyReport,
+        transformers,
+        setTransformers,
+        topologyType,
+        setTopologyType,
+        scdFile,
+        setScdFile,
+        isLoading,
+        setIsLoading,
         clearSession,
       }}
     >
