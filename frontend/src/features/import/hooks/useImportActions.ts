@@ -218,9 +218,9 @@ export function useImportActions() {
 
         for (const slotId of idsParaBuscar) {
           const slot = slotsAtualizados.find((s) => s.id === slotId);
-          if (slot?.iedId && !slot.file) {
+          if (slot?.name && !slot.file) {
             try {
-              const networkData = await networkService.fetchIedData(slot.iedId);
+              const networkData = await networkService.fetchIedData(slot.name);
 
               const virtualFile = {
                 ...networkData,
@@ -257,8 +257,8 @@ export function useImportActions() {
     setLoading(true);
     try {
       if (payload === "TRIGGER_NETWORK_SEARCH") {
-        if (!targetSlot.iedId) return;
-        const response = await networkService.fetchIedData(targetSlot.iedId);
+        if (!targetSlot.name) return;
+        const response = await networkService.fetchIedData(targetSlot.name);
 
         const virtualFile = {
           ...response,
@@ -313,7 +313,7 @@ export function useImportActions() {
     }
   };
 
-  const handleRemoveIedFile = (id: number | string) => {
+  const handleRemoveIedFile = (id: string) => {
     if (typeof id === "string") {
       setIedSlots((prev) =>
         prev.map((slot) => (slot.id === id ? { ...slot, file: null } : slot)),

@@ -38,16 +38,16 @@ function ImportSection({
   };
 
   const handleFetchAllFromNetwork = () => {
-    const idsParaBuscar = iedSlots
-      .filter((s) => s.iedId && !s.file)
+    const slotsToFetch = iedSlots
+      .filter((s) => s.name && !s.file)
       .map((s) => s.id);
 
-    if (idsParaBuscar.length === 0) {
+    if (slotsToFetch.length === 0) {
       onError?.("Nenhum equipamento disponível para busca.");
       return;
     }
 
-    onUpdateSlot?.("BATCH_SEARCH", idsParaBuscar as any);
+    onUpdateSlot?.("BATCH_SEARCH", slotsToFetch as any);
   };
 
   return (
@@ -101,7 +101,7 @@ function ImportSection({
             <Button
               variant="outline"
               onClick={handleFetchAllFromNetwork}
-              disabled={iedSlots.every((s) => !s.iedId)}
+              disabled={iedSlots.every((s) => !s.name)}
               className="px-6 py-2 shadow-none"
             >
               BUSCAR NA REDE
