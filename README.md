@@ -95,8 +95,8 @@ Para liberar a busca de dados via FTP/Telnet de forma simulada, siga esses passo
 [x] Relatório de validação de parâmetros  
 [x] Extração e validação de arquivos .SCD  
 [x] Sistema de autenticação e gestão de históricos  
-[x] Refatoração do código
-[x] Módulo de rede FTP/Telnet (simulação do sistema)
+[x] Refatoração do código  
+[x] Módulo de rede FTP/Telnet (simulação do sistema)  
 [x] Tela de formulário de subestação    
 [x] Visualização gráfica dos erros de validação  
 
