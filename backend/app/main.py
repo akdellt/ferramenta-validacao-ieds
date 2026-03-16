@@ -31,15 +31,20 @@ async def lifespan(app: FastAPI):
             )
             db.add(master_user)
 
-        ied_teste_nome = "02T2"
+        sub_teste = "CLP"
+        comp_teste = "02T2"
+        ied_teste_nome = f"{sub_teste}_{comp_teste}"
         ied = db.query(models.NetworkIED).filter(models.NetworkIED.name == ied_teste_nome).first()
         
         if not ied:
             test_ied = models.NetworkIED(
                 name=ied_teste_nome,
+                substation=sub_teste,
+                component_name=comp_teste,
                 relay_model="SEL 2414",
                 ip_address="host.docker.internal",
-                port=2222
+                port=21,
+                connection_type="FTP"
             )
             db.add(test_ied)
 
@@ -60,8 +65,7 @@ app = FastAPI(
 
 origins = [
     "http://localhost:5173",
-    "http://localhost:3000",
-    "*" # remover depois
+    "http://localhost:3000"
 ]
 
 app.add_middleware(

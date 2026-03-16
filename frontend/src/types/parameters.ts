@@ -45,5 +45,5 @@ export interface IedSlotData {
   file: IedFileData | null;
   filename_oa: string;
   substation: string;
-  iedId?: number;
+  name: string;
 }

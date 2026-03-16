@@ -25,6 +25,7 @@ class CurrentParameter(BaseModel):
 class OAFilesData(BaseModel):
     filename: str
     substation: str
+    component_name: str
     relay_model: str
     parameters: list[ReferenceParameter]
     

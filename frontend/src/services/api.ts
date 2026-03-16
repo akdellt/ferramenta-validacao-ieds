@@ -52,8 +52,8 @@ export const iedService = {
 };
 
 export const networkService = {
-  fetchIedData: async (iedId: number) => {
-    const response = await api.get(`/relays/search-network/${Number(iedId)}`);
+  fetchIedData: async (iedName: string) => {
+    const response = await api.get(`/relays/search-network/${iedName}`);
     return response.data;
   },
 };

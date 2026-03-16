@@ -14,7 +14,6 @@ from app.exceptions import (
     FileTooLargeError
 )
 
-# FORMATAÇÃO DOS NOMES DOS IEDS (MARCA MODELO)
 FORBIDDEN_WORDS: set[str] = {"RELE", "RELES", "RELAY", "DO", "DA", "DE", "TYPE", "MODELO"}
 
 OA_METADATA_TERMS: set[str] = {
@@ -25,7 +24,8 @@ OA_METADATA_TERMS: set[str] = {
     "RELE",
     "TRAFO MARCA",
     "EQUIPAMENTO",
-    "SUBESTAÇÃO:",
+    "COMPONENTE",
+    "SUBESTAÇÃO",
     "CONTROLE DE TAP E TEMPERATURA",
 }
 
@@ -34,6 +34,7 @@ IED_IGNORED_KEYS: set[str] = {"RELAYTYPE", "BFID", "PARTNO", "RID", "TID", "INFO
 
 MAX_XLSX_SIZE_BYTES: int = 5 * 1024 * 1024
 
+# FORMATAÇÃO DOS NOMES DOS IEDS (MARCA MODELO)
 def format_relay_name(name: str | None) -> str:
     if not name:
         return "NÃO IDENTIFICADO"
@@ -55,7 +56,7 @@ def format_relay_name(name: str | None) -> str:
 
     return " ".join(words[:2])
 
-# EXTRAÇÃO DOS PARÂMETROS DA ORDEM DE AJUSTE
+
 def metadata_row(param_value: str | None, row_text: str) -> bool:
     if param_value:
         param_upper = param_value.upper()
@@ -64,6 +65,7 @@ def metadata_row(param_value: str | None, row_text: str) -> bool:
 
     return "DATA DE EMISSÃO" in row_text or "DADOS DA INSTALAÇÃO" in row_text
 
+# EXTRAÇÃO DOS PARÂMETROS DA ORDEM DE AJUSTE
 def parse_oa_parameters(ws: Worksheet, filename: str) -> list[ReferenceParameter]:
     parameters_list = []
     current_group = "GENERAL SETTINGS"
@@ -184,6 +186,7 @@ def parse_oa_file(content: bytes, filename: str) -> OAFilesData:
 
         relay_model = format_relay_name(sheet["D3"].value)
         substation = str(sheet["D6"].value).strip() if sheet["D6"].value else "NÃO IDENTIFICADA"
+        component_name = str(sheet["D7"].value).strip() if sheet["D7"].value else "NÃO IDENTIFICADO"
 
         params = parse_oa_parameters(sheet, filename)
         workbook.close()
@@ -191,6 +194,7 @@ def parse_oa_file(content: bytes, filename: str) -> OAFilesData:
         return OAFilesData(
             filename=filename,
             substation=substation,
+            component_name=component_name,
             relay_model=relay_model,
             parameters=params
         )
@@ -212,14 +216,13 @@ def parse_ied_parameters(text: str) -> list[CurrentParameter]:
         if key in IED_IGNORED_KEYS:
             continue
         
-        # TODO: MELHORAR REMOÇÃO DE COMENTÁRIOS
-        if "#" in value:
-            value = value.split("#")[0]
+        clean_value = value.split("#")[0].strip().replace('"', '')
 
-        param_list.append(CurrentParameter(
-            parameter=key,
-            current_value=value.strip()
-        ))
+        if clean_value:
+            param_list.append(CurrentParameter(
+                parameter=key,
+                current_value=clean_value
+            ))
 
     return param_list
 

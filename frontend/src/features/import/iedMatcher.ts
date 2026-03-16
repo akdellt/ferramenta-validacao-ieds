@@ -19,9 +19,9 @@ export const performIedMatch = (
       id: crypto.randomUUID(),
       relay_model: item.relay_model,
       substation: item.substation || "",
+      name: matchedIed ? matchedIed.name : "",
       filename_oa: fileName,
       file: null,
-      iedId: matchedIed ? matchedIed.id : null,
     };
   });
 };

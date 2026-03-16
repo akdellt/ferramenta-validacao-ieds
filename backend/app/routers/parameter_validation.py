@@ -5,9 +5,10 @@ from app.database import get_db
 from app.schemas.parameters import *
 from app.services.parameter_module.parameter_parser import parse_oa_file, parse_ied_file
 from app.services.parameter_module.comparator import process_files
-from app.services.network_module.ssh_client import search_ied
+from app.services.network_module.network_client import search_ied
 from app.exceptions import InvalidFileFormatError
 from app.models import NetworkIED
+from app.services.network_module.credentials import get_dynamic_password
 import json
 
 router = APIRouter(
@@ -99,32 +100,33 @@ async def validate_pairs(oa_list: list[UploadFile] = File(...), ied_data: str = 
     return report
 
 # ROTA DE BUSCAR DADOS PELA REDE
-@router.get("/search-network/{ied_id}", response_model=IEDFilesData)
-async def fetch_ied_from_network(ied_id: int, db: Session = Depends(get_db)):
-    ied = db.query(NetworkIED).filter(NetworkIED.id == ied_id).first()
+@router.get("/search-network/{ied_name}", response_model=IEDFilesData)
+async def fetch_ied_from_network(ied_name: str, db: Session = Depends(get_db)):
+    ied = db.query(NetworkIED).filter(NetworkIED.name == ied_name).first()
 
     if not ied:
         raise HTTPException(
             status_code=404,
-            detail=f"IED com id {ied_id} não encontrado."
+            detail=f"IED {ied_name} não encontrado."
         )
     
+    password = await get_dynamic_password(ied.name)
+
     try:
-        raw_content, remote_filename = search_ied(ied)
+        raw_content, remote_filename = await search_ied(ied, password)
     except Exception as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Falha na comunicação com o IED: {str(e)}"
+            detail=f"Falha de conexão com o IED (Rede): {str(e)}"
         )
-    
+
     try:
-        # MUDAR DEPOIS PRA NAME QUANDO DESCOBRIR COMO MELHOR VALIDAR PRA IEDS DE MESMO MODELO
-        parsed_data = parse_ied_file(raw_content.encode(), remote_filename)
+        parsed_data = parse_ied_file(raw_content.encode("utf-8"), remote_filename)
         return parsed_data
     except Exception as e:
         raise HTTPException(
             status_code=422,
-            detail=f"Erro ao processar os dados recebidos do IED: {str(e)}"
+            detail=f"Erro ao interpretar dados do IED: {str(e)}"
         )
     
 # ROTA DE BUSCAR TODOS OS IPS DOS IEDS CADASTRADOS (MAPA DE IPS)

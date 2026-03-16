@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import String, ForeignKey, func
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -22,10 +22,13 @@ class NetworkIED(Base):
     __tablename__ = "network_ieds"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(String, unique=True, index=True)
+    substation: Mapped[str] = mapped_column(String, index=True)
+    component_name: Mapped[str] = mapped_column(String)
     relay_model: Mapped[str] = mapped_column(String) 
     ip_address: Mapped[str] = mapped_column(String)
-    port: Mapped[int] = mapped_column(default=20000)
+    port: Mapped[int] = mapped_column(default=21)
+    connection_type: Mapped[str] = mapped_column(String, default="FTP")
 
 class ValidationLog(Base):
     __tablename__ = "validation_logs"
