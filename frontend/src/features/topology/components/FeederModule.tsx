@@ -18,8 +18,19 @@ export const FeederModule = ({
 }: FeederModuleProps) => {
   const color = isError ? "var(--color-error)" : "var(--color-eq-primary)";
 
+  const baseStrokeWidth = "3";
+
+  const hoverClass = isError
+    ? "cursor-pointer group-hover:stroke-[4px] transition-all duration-200"
+    : "pointer-events-none";
+
   return (
-    <g>
+    <g
+      onClick={isError ? onClick : undefined}
+      style={{ cursor: isError ? "pointer" : "default" }}
+      className={isError ? "group" : ""}
+      strokeWidth={baseStrokeWidth}
+    >
       <line
         x1={x}
         y1={y - spacing / 2}
@@ -35,7 +46,7 @@ export const FeederModule = ({
         x2={x + 60}
         y2={y}
         stroke="var(--color-eq-primary)"
-        strokeWidth="2"
+        className={hoverClass}
       />
 
       <rect
@@ -45,10 +56,7 @@ export const FeederModule = ({
         height="30"
         fill="white"
         stroke={color}
-        strokeWidth="2"
-        className={
-          isError ? "cursor-pointer hover:stroke-[3px]" : "cursor-default"
-        }
+        className={hoverClass}
         onClick={(e) => {
           if (!isError) {
             e.preventDefault();
@@ -58,7 +66,12 @@ export const FeederModule = ({
         }}
       />
 
-      <text x={x + 100} y={y + 5} className="fill-secondary font-mono text-xs">
+      <text
+        x={x + 100}
+        y={y + 5}
+        stroke="none"
+        className="fill-secondary font-mono text-xs"
+      >
         {name}
       </text>
     </g>

@@ -6,13 +6,20 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
 
     # VERIFICA QUANTIDADE DE TRANSFORMADORES EM RELAÇÃO AO FORMULÁRIO
     scd_transformers = [ied for ied in scd_data.ieds if "T" in ied.name.upper()]
-    if len(scd_transformers) != form.transformer_count:
+    scd_count = len(scd_transformers)
+    form_count = form.transformer_count
+    if scd_count != form_count:
+        if scd_count < form_count:
+            msg = "Há mais transformadores no formulário do que no SCD"
+        else:
+            msg = "Há mais transformadores no SCD do que no formulário"
+
         consistency_errors.append(
             ErrorDetail(
                 category=ErrorCategory.CONSISTENCY,
-                message="Quantidade de transformadores no SCD não condiz com o formulário",
-                expected=str(form.transformer_count),
-                found=str(len(scd_transformers))
+                message=msg,
+                expected=f"{form_count} (Formulário)",
+                found=f"{scd_count} (Arquivo SCD)"
             )
         )
 
@@ -35,27 +42,37 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
         trafo_ied = next((ied for ied in scd_data.ieds if ied.name ==  trafo_name), None)
         # TRANFORMADOR DO FORMULÁRIO NÃO EXISTE NO ARQUIVO
         if not trafo_ied:
+            valid_names = [ied.name for ied in scd_transformers]
+            if len(valid_names) > 3:
+                expected_display = " / ".join(valid_names[:3]) + f" ... (+{len(valid_names)-3} outros)"
+            else:
+                expected_display = " / ".join(valid_names)
+
             consistency_errors.append(
                 ErrorDetail(
                     category=ErrorCategory.CONSISTENCY,
-                    message=f"Transformador declarado no formulário não existe no arquivo SCD",
-                    device=trafo_name
+                    message=f"O transformador '{trafo_name}' não consta no arquivo SCD",
+                    expected=trafo_name,
+                    found=expected_display
                 )
             )
             continue
-
+        
+        reported_as_missing = set()
         actual_feeders = set(ext.listens_to for ext in trafo_ied.inputs if ext.listens_to)
         # TRANSFORMADOR ESPERADO NÃO ESTÁ CONECTADO
         for feeder in expected_feeders:
             if feeder not in actual_feeders:
+                reported_as_missing.add(feeder)
+                found_list = list(actual_feeders)
+                found_display = " / ".join(found_list) if found_list else "Nenhuma conexão detectada"
+
                 consistency_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.CONSISTENCY,
                         message=f"{trafo_name} deveria estar ouvindo {feeder}",
-                        publisher=feeder,
-                        subscriber=trafo_name,
-                        expected="Conectado",
-                        found="Desconectado"
+                        expected=feeder,
+                        found=found_display
                     )
                 )
 
@@ -65,6 +82,9 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
             extra_feeders = {f for f in extra_feeders if "T" not in f.upper()}
 
         for extra in extra_feeders:
+            if len(reported_as_missing) > 0:
+                continue
+            
             consistency_errors.append(
                 ErrorDetail(
                     category=ErrorCategory.CONSISTENCY,
@@ -73,13 +93,24 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
                     subscriber=trafo_name
                 )
             )
-
+    
     # VERIFICA TOPOLOGIA SELECIONADA
+    scd_trafos_inputs = []
+    for t in scd_transformers:
+        inputs = set(ext.listens_to for ext in t.inputs if ext.listens_to)
+        scd_trafos_inputs.append(inputs)
+
+    has_shared_feeders = False
+    if len(scd_trafos_inputs) > 1:
+        for i in range(len(scd_trafos_inputs)):
+            for j in range(i + 1, len(scd_trafos_inputs)):
+                if scd_trafos_inputs[i] & scd_trafos_inputs[j]:
+                    has_shared_feeders = True
+                    break
+
     has_inter_trafo_comm = False
-    for t1 in scd_transformers:
-        t1_inputs = set(ext.listens_to for ext in t1.inputs if ext.listens_to)
-        # BUSCA CONEXÃO ENTRE TRANSFORMADORES
-        if any("T" in other.upper() for other in t1_inputs if other != t1.name):
+    for inputs in scd_trafos_inputs:
+        if any("T" in other.upper() for other in inputs):
             has_inter_trafo_comm = True
             break
         
@@ -95,25 +126,30 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
         )
     
     # VERIFICA SE NÃO HÁ CONEXÃO ENTRE TRAFOS QUANDO SELECIONADO SLBF COM TRAFOS INDEPENDENTES
-    elif form.expected_topology ==TopologyType.LOGICAL_SELECTIVITY_ISOLATED and has_inter_trafo_comm:
-        consistency_errors.append(
-            ErrorDetail(
-                category=ErrorCategory.CONSISTENCY,
-                message="SLBF Independente selecionada, mas transformadores estão conectados",
-                expected="Transformadores isolados",
-                found="Transformadores interconectados"
+    elif form.expected_topology ==TopologyType.LOGICAL_SELECTIVITY_ISOLATED:
+        if has_shared_feeders or has_inter_trafo_comm:
+            consistency_errors.append(
+                ErrorDetail(
+                    category=ErrorCategory.CONSISTENCY,
+                    message="SLBF Independente selecionada, mas transformadores estão conectados",
+                    expected="Transformadores isolados",
+                    found="Transformadores interconectados"
+                )
             )
-        )
 
     # VERIFICA SE HÁ CONEXÃO ENTRE TRAFOS QUANDO SELECIONADO SLBF COM TRAFOS COM BARRA COMUM
     elif form.expected_topology == TopologyType.LOGICAL_SELECTIVITY_COUPLED:
-        all_mapped_feeders = []
-        for feeders in form.expected_mapping.values():
-            all_mapped_feeders.extend(feeders)
+        if form.transformer_count < 2:
+            consistency_errors.append(
+            ErrorDetail(
+                category=ErrorCategory.CONSISTENCY,
+                message="SLBF Barra Comum exige no mínimo 2 transformadores",
+                expected="2 ou mais transformadores",
+                found=f"{form.transformer_count} transformador(es)"
+            )
+        )
         
-        # VERIFICA PRESENÇA DOS ALIMENTADORES EM TODOS OS TRANSFORMADORES
-        is_shared = len(all_mapped_feeders) != len(set(all_mapped_feeders))
-        if not is_shared:
+        elif not has_shared_feeders:
             consistency_errors.append(
                 ErrorDetail(
                     category=ErrorCategory.CONSISTENCY,
@@ -122,5 +158,7 @@ def validate_project_consistency(scd_data: TopologyResponse, form: ValidationFor
                     found="Alimentadores exclusivos"
                 )
             )
+
+        
 
     return consistency_errors

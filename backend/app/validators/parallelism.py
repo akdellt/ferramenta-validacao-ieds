@@ -3,7 +3,7 @@ from app.schemas.topology import TopologyResponse, ErrorDetail, ErrorCategory
 # VALIDAÇÃO DAS REGRAS DE PARALELISMO
 def validate_parallelism_topology(topology: TopologyResponse) -> list[ErrorDetail]:
     errors = []
-    all_ied_names = {ied.name for ied in topology.ieds}
+    all_ied_names = {ied.name.strip().upper() for ied in topology.ieds if ied.name}
     
     # MÁXIMO DE CINCO TRANSFORMADORES EM PARALELO
     if len(all_ied_names) > 5:
@@ -11,14 +11,15 @@ def validate_parallelism_topology(topology: TopologyResponse) -> list[ErrorDetai
             category=ErrorCategory.LOGIC,
             message=f"Subestação suporta no máximo 5 tranformadores em paralelo",
             expected="Máximo 5 IEDs",
-            found=f"{str(len(all_ied_names))} IEDs"
+            found=f"{len(all_ied_names)} IEDs"
         ))
         return errors
 
     # TODOS OS TRANSFORMADORES EM PARALELO DEVEM SE COMUNICAR COM OS OUTROS
     for ied in topology.ieds:
-        expected_partners = all_ied_names - {ied.name}
-        actual_partners = {ext_ref.listens_to for ext_ref in ied.inputs if ext_ref.listens_to}
+        current_name = ied.name.strip().upper()
+        expected_partners = all_ied_names - {current_name}
+        actual_partners = {ext_ref.listens_to.strip().upper() for ext_ref in ied.inputs if ext_ref.listens_to}
         missing_partners = expected_partners - actual_partners
 
         for missing in missing_partners:
@@ -26,9 +27,9 @@ def validate_parallelism_topology(topology: TopologyResponse) -> list[ErrorDetai
                 category=ErrorCategory.LOGIC,
                 message=f"Este IED não está conectado ao IED parceiro",
                 publisher=missing,
-                subscriber=ied.name,
-                expected="IED conectado",
-                found="IED ausente"
+                subscriber=current_name,
+                expected=f"Conexão com {missing}",
+                found=f"IED {missing} ausente nos Inputs"
             ))
     return errors
 
@@ -67,18 +68,19 @@ def validate_datasets(topology: TopologyResponse) -> list[ErrorDetail]:
                 missing = ref_signals - cur_signals
                 extra = cur_signals - ref_signals
 
+                expected_text = "\n".join(sorted(ref_signals))
                 found_details = []
                 if missing:
-                    found_details.append(f"Faltando: {', '.join(missing)}")
+                    found_details.append(f"FALTANDO: \n{'\n'.join(sorted(missing))}")
                 if extra:
-                    found_details.append(f"Extra: {', '.join(extra)}")
+                    found_details.append(f"EXTRA: \n{'\n'.join(sorted(extra))}")
 
                 dataset_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
                     message=f"Dataset possui arquivos divergente da referência {reference_ied.name}",
                     device=ied.name,
-                    expected="Sincronizado com referência",
-                    found=" | ".join(found_details)
+                    expected=expected_text,
+                    found="\n".join(found_details)
                 ))
 
     return dataset_errors
@@ -94,12 +96,12 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
         # RA1 -- RA4 : POSIÇÃO DO TAP                           AnIn16
     vb_errors = []
     
-    ied_names = sorted([ied.name for ied in topology.ieds])
+    ied_names = sorted([ied.name.strip().upper() for ied in topology.ieds if ied.name])
     
     for ied in topology.ieds:
         used_vbs = {}
-
-        expected_ieds = [name for name in ied_names if name != ied.name]
+        current_name = ied.name.strip().upper()
+        expected_ieds = [name for name in ied_names if name != current_name]
         ied_slots = {ied: index + 1 for index, ied in enumerate(expected_ieds)}
 
         for ext_ref in ied.inputs:
@@ -147,19 +149,14 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                     # CRUZA O DO_NAME COM A POSIÇÃO CORRETA:
                     if do_name == "Ind07":                      # MESTRE (VB 1 a 4)
                         expected_vb = slot
-                        signal_type = "Mestre"
                     elif do_name == "Ind01":                    # AUMENTO DE TAP (VB 9 a 12)
                         expected_vb = slot + 8
-                        signal_type = "Aumento de Tap"
                     elif do_name == "Ind02":                    # DIMINUI DE TAP (VB 13 a 16)
                         expected_vb = slot + 12
-                        signal_type = "Diminuição de Tap"
                     elif do_name == "Ind08":                    # PARALELO (VB 17 a 20)
                         expected_vb = slot + 16
-                        signal_type = "Operação em Paralelo"
                     elif do_name is None or do_name == "":      # QUALIDADE GOOSE (Sem doName, VB 5 a 8)
                         expected_vb = slot + 4
-                        signal_type = "Qualidade da Mensagem"
                     else:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
@@ -171,15 +168,16 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                     
                     # VERIFICA SE ESTÁ USANDO O BLOCO RESERVADO
                     num = int(vb_upper.replace("VB", ""))
-                    expected_str = f"VB{expected_vb:02d}"
+                    expected_vb_str = f"VB{expected_vb:02d}"
+
                     if num != expected_vb:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
-                            message=f"Sinal '{signal_type}' do trafo {target} está na posição errada",
+                            message=f"Sinal '{obj_ref}' do trafo {target} está na posição errada",
                             publisher=target,
                             subscriber=ied.name,
                             affected_signal=obj_ref,
-                            expected=expected_str,
+                            expected=expected_vb_str,
                             found=vb_upper
                         )) 
                     
@@ -256,12 +254,12 @@ def validate_parallelism_vars(topology: TopologyResponse) -> list[ErrorDetail]:
             if not var_is_published:
                 publish_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
-                    message=("Alimentador não está publicando este dado"),
+                    message=f"Sinal esperado do IED {subscriber.name} não encontrado no dataset",
                     publisher=publisher.name,
                     subscriber=subscriber.name,
                     affected_signal=obj_ref,
-                    expected="Sinal no DataSet",
-                    found="Sinal ausente"
+                    expected=obj_ref,
+                    found=f"Sinal ausente no {target_name}"
                 ))
 
     return publish_errors

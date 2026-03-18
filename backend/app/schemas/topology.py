@@ -10,7 +10,7 @@ class TopologyType(str, Enum):
 
 # POSSÍVEIS CATEGORIAS DE ERRO
 class ErrorCategory(str, Enum):
-    CONSISTENCY = "Formulário"       
+    CONSISTENCY = "Consistência"       
     COMMUNICATION = "Comunicação" 
     LOGIC = "Lógica"
 

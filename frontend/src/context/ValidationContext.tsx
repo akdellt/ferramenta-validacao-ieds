@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 import type { IedSlotData } from "../types/parameters";
 import type {
   TopologyValidationResponse,
@@ -13,6 +19,7 @@ interface ValidationContextData {
   reportResults: BackendReport | null;
 
   topologyType: string;
+  formData: any;
   scdFile: File | null;
 
   topologyReport: TopologyValidationResponse | null;
@@ -24,6 +31,7 @@ interface ValidationContextData {
   setReportResults: React.Dispatch<React.SetStateAction<BackendReport | null>>;
 
   setTopologyType: (type: string) => void;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
   setScdFile: (file: File | null) => void;
 
   setTopologyReport: React.Dispatch<
@@ -49,12 +57,17 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
   );
 
   const [topologyType, setTopologyType] = useState("");
+  const [formData, setFormData] = useState<any>(null);
   const [scdFile, setScdFile] = useState<File | null>(null);
 
   const [topologyReport, setTopologyReport] =
     useState<TopologyValidationResponse | null>(null);
   const [transformers, setTransformers] = useState<Transformer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setTransformers([]);
+  }, [topologyType, setTransformers]);
 
   const clearSession = () => {
     setOaFiles([]);
@@ -63,6 +76,7 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
     setTopologyReport(null);
     setTransformers([]);
     setTopologyType("");
+    setFormData(null);
     setScdFile(null);
     navigate("/");
   };
@@ -82,6 +96,8 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
         setTransformers,
         topologyType,
         setTopologyType,
+        formData,
+        setFormData,
         scdFile,
         setScdFile,
         isLoading,

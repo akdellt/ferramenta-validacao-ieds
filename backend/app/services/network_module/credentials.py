@@ -4,7 +4,6 @@ from app.core.config import settings
 
 
 async def _get_vault_token() -> str:
-    """Autentica no Vault e retorna o token de acesso."""
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{settings.VAULT_API_URL}{settings.VAULT_AUTH_ENDPOINT}",

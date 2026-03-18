@@ -1,6 +1,10 @@
 import { TransformerBay } from "./TransformerBay";
 import { FeederModule } from "./FeederModule";
-import type { TopologyType, Transformer } from "../types";
+import {
+  type TopologyType,
+  type Transformer,
+  getTopologyHelpers,
+} from "../types";
 
 interface CircuitDiagramProps {
   transformers: Transformer[];
@@ -15,9 +19,8 @@ export const CircuitDiagram = ({
   topologyType,
   onComponentClick,
 }: CircuitDiagramProps) => {
-  const isCommonBus = topologyType === "Seletividade Lógica com Barra Comum";
-  const isParallelism = topologyType === "Paralelismo";
-  const isIndependent = topologyType === "Seletividade Lógica Independente";
+  const { isCommonBus, isParallel, isIndependent } =
+    getTopologyHelpers(topologyType);
 
   const feederSpacing = 70;
   const xAnchor = 40;
@@ -43,7 +46,7 @@ export const CircuitDiagram = ({
     totalHeight =
       100 +
       Math.max(transformers.length * 120, uniqueFeeders.length * feederSpacing);
-  } else if (isParallelism) {
+  } else if (isParallel) {
     totalHeight = 100 + transformers.length * 150;
   } else {
     totalHeight = transformers.reduce(
@@ -59,7 +62,8 @@ export const CircuitDiagram = ({
     <svg
       height={totalHeight}
       viewBox={`0 0 ${dynamicWidth} ${totalHeight}`}
-      className="mx-auto block h-auto w-full max-w-4xl"
+      className="circuit-svg mx-auto block h-auto w-full max-w-4xl"
+      preserveAspectRatio="xMidYMid meet"
     >
       <line
         x1={xAnchor}
@@ -70,7 +74,7 @@ export const CircuitDiagram = ({
         strokeWidth="4"
       />
 
-      {isParallelism && (
+      {isParallel && (
         <line
           x1={xBusSecundario}
           y1={50}
@@ -103,7 +107,7 @@ export const CircuitDiagram = ({
               onClick={() => onComponentClick(tr.name)}
             />
 
-            {isParallelism && (
+            {isParallel && (
               <line
                 x1={xAnchor + 310}
                 y1={yCenter}

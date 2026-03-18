@@ -3,6 +3,8 @@ import { Plus } from "lucide-react";
 import { useValidation } from "../context/ValidationContext";
 import { ErrorBanner } from "../components/common/ErrorBanner";
 
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTopologySubmission } from "../features/topology/hooks/useTopologySubmission";
 import { TransformerCard } from "../features/topology/components/TransformerCard";
 import { TopologyTypeSelector } from "../features/topology/components/TopologyTypeSelector";
@@ -11,6 +13,8 @@ import { FILE_CONFIG } from "../config/fileUpload";
 import useTopologyActions from "../features/topology/hooks/useTopologyActions";
 import Card from "../components/common/Card";
 import { Button } from "../components/common/Button";
+import { getTopologyHelpers } from "../features/topology/types";
+import { CircuitErrorModal } from "../features/topology/components/CircuitErrorModal";
 
 function TopologyPage() {
   const {
@@ -21,23 +25,69 @@ function TopologyPage() {
     addFeeder,
     updateFeeder,
     removeFeeder,
+    resetTopologyState,
   } = useTopologyActions();
 
   const { topologyType, setTopologyType, scdFile, setScdFile } =
     useValidation();
 
-  const { submit, isLoading, apiError, setApiError } = useTopologySubmission();
+  const {
+    submit,
+    isLoading,
+    apiError,
+    setApiError,
+    handleLocalError,
+    isErrorModalOpen,
+    setIsErrorModalOpen,
+    consistencyErrors,
+    isSuccess,
+  } = useTopologySubmission();
 
-  const handleLocalError = (
-    msg: string,
-    title: string = "Erro de Validação",
-  ) => {
-    setApiError({
-      error: "ValidationError",
-      message: msg,
-      details: title,
-    });
+  const navigate = useNavigate();
+
+  const { isCommonBus, isParallel } = getTopologyHelpers(topologyType);
+
+  const transformerNames = transformers.map((t) => t.name.trim().toUpperCase());
+  const duplicateTrafos = transformerNames.filter(
+    (name, idx) => name !== "" && transformerNames.indexOf(name) !== idx,
+  );
+
+  const duplicateFeederNames = (() => {
+    if (isCommonBus || isParallel) {
+      return transformers.flatMap((t) => {
+        const names = t.feeders
+          .map((f) => f.name.trim().toUpperCase())
+          .filter((n) => n !== "");
+        return names.filter((name, index) => names.indexOf(name) !== index);
+      });
+    }
+
+    const allNames = transformers
+      .flatMap((t) => t.feeders.map((f) => f.name.trim().toUpperCase()))
+      .filter((name) => name !== "");
+
+    return allNames.filter((name, index) => allNames.indexOf(name) !== index);
+  })();
+
+  const isFormInvalid =
+    !topologyType ||
+    !scdFile ||
+    (isCommonBus && transformers.length < 2) ||
+    (isParallel && transformers.length < 2) ||
+    transformers.some((t) => t.name.trim() === "") ||
+    duplicateTrafos.length > 0 ||
+    duplicateFeederNames.length > 0;
+
+  const handleCloseModal = () => {
+    setIsErrorModalOpen(false);
+    if (isSuccess) navigate("/circuits");
   };
+
+  useEffect(() => {
+    if (topologyType) {
+      resetTopologyState(topologyType);
+    }
+  }, [topologyType, resetTopologyState]);
 
   return (
     <div className="flex h-full w-full flex-1 flex-col items-center overflow-y-auto p-8 py-12">
@@ -60,6 +110,12 @@ function TopologyPage() {
             key={transf.id}
             index={index}
             transformer={transf}
+            topologyType={topologyType}
+            duplicateNames={duplicateFeederNames}
+            isNameDuplicate={duplicateTrafos.includes(
+              transf.name.trim().toUpperCase(),
+            )}
+            canEditFeeders={isCommonBus ? index === 0 : true}
             isRemovable={transformers.length > 1}
             onRemove={removeTransformer}
             onUpdateName={updateTransformerName}
@@ -97,11 +153,19 @@ function TopologyPage() {
           <Button
             onClick={submit}
             isLoading={isLoading}
-            disabled={!topologyType || !scdFile}
+            disabled={isFormInvalid}
           >
             VERIFICAR
           </Button>
         </div>
+
+        <CircuitErrorModal
+          isOpen={isErrorModalOpen}
+          onClose={handleCloseModal}
+          IedName="Consistência do Projeto"
+          errors={consistencyErrors}
+          isSuccess={isSuccess}
+        />
       </div>
     </div>
   );
