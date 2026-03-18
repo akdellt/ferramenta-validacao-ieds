@@ -48,7 +48,7 @@ const CircuitsPage = () => {
   if (!topologyReport) {
     return (
       <div className="py-20 text-center">
-        <p className="text-gray-500 italic">
+        <p className="text-sm text-gray-500">
           Aguardando resultados da validação...
         </p>
       </div>
@@ -61,7 +61,7 @@ const CircuitsPage = () => {
         RESULTADO DE VALIDAÇÕES
       </h1>
 
-      <main className="flex h-auto min-h-150 w-full items-center justify-center overflow-auto rounded-xl border-2 border-dashed border-gray-200 bg-white p-4">
+      <main className="diagram-canvas min-h-[600px] w-full overflow-auto rounded-xl border-2 border-dashed border-gray-200 shadow-inner">
         <CircuitDiagram
           transformers={transformersFromSCD}
           errors={activeErrors}

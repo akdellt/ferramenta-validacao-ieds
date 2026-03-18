@@ -3,11 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../../services/api";
 import { useValidation } from "../../../context/ValidationContext";
 import type { BackendError } from "../../../types/error";
+import { getTopologyHelpers, type ErrorDetail } from "../types";
 
 export function useTopologySubmission() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<BackendError | null>(null);
+
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [consistencyErrors, setConsistencyErrors] = useState<ErrorDetail[]>([]);
+
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     transformers,
@@ -19,23 +25,59 @@ export function useTopologySubmission() {
   } = useValidation();
 
   const validateLocal = (): boolean => {
-    const isNamesValid = transformers.every((t) => t.name.trim() !== "");
-    const names = transformers.map((t) => t.name.trim().toUpperCase());
-    const hasDuplicates = names.some(
-      (name, index) => names.indexOf(name) !== index,
+    const { isParallel, isCommonBus } = getTopologyHelpers(topologyType);
+
+    const transformerNames = transformers.map((t) =>
+      t.name.trim().toUpperCase(),
     );
 
-    if (hasDuplicates) {
+    const hasDuplicateTransformers = transformerNames.some(
+      (name, index) => transformerNames.indexOf(name) !== index && name !== "",
+    );
+
+    if (hasDuplicateTransformers) {
       handleLocalError("Existem transformadores com nomes duplicados.");
       return false;
     }
 
+    if (isCommonBus) {
+      const hasLocalDuplicates = transformers.some((t) => {
+        const names = t.feeders
+          .map((f) => f.name.trim().toUpperCase())
+          .filter((n) => n !== "");
+        return names.some((name, index) => names.indexOf(name) !== index);
+      });
+
+      if (hasLocalDuplicates) {
+        handleLocalError(
+          "Um transformador não pode ter dois alimentadores com o mesmo nome.",
+        );
+        return false;
+      }
+    } else if (!isParallel) {
+      const allFeederNames = transformers
+        .flatMap((t) => t.feeders.map((f) => f.name.trim().toUpperCase()))
+        .filter((name) => name !== "");
+
+      const hasGlobalDuplicates = allFeederNames.some(
+        (name, index) => allFeederNames.indexOf(name) !== index,
+      );
+
+      if (hasGlobalDuplicates) {
+        handleLocalError(
+          "Na seletividade independente, cada alimentador deve ter um nome exclusivo.",
+        );
+        return false;
+      }
+    }
+
+    const isNamesValid = transformers.every((t) => t.name.trim() !== "");
     if (!topologyType || !isNamesValid || !scdFile) {
       handleLocalError("Preencha todos os campos e selecione o arquivo SCD.");
       return false;
     }
 
-    if (topologyType === "Paralelismo" && transformers.length < 2) {
+    if (isParallel && transformers.length < 2) {
       handleLocalError(
         "Para operação em Paralelismo, configure no mínimo 2 transformadores.",
         "Restrição Técnica",
@@ -63,6 +105,7 @@ export function useTopologySubmission() {
     setIsLoading(true);
     setGlobalLoading(true);
     setApiError(null);
+    setIsSuccess(false);
 
     try {
       const formData = new FormData();
@@ -73,13 +116,16 @@ export function useTopologySubmission() {
         mapping[t.name] = t.feeders.map((f) => f.name);
       });
 
+      const uniqueFeederNames = new Set(
+        transformers.flatMap((t) =>
+          t.feeders.map((f) => f.name.trim().toUpperCase()),
+        ),
+      );
+
       const formPayload = {
         expected_topology: topologyType,
         transformer_count: transformers.length,
-        feeder_count: transformers.reduce(
-          (acc, t) => acc + t.feeders.length,
-          0,
-        ),
+        feeder_count: uniqueFeederNames.size,
         expected_mapping: mapping,
       };
 
@@ -89,10 +135,35 @@ export function useTopologySubmission() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setTopologyReport(response.data);
-      setTransformers(transformers);
+      const report = response.data;
 
-      navigate("/circuits");
+      const hasConsistency =
+        report.consistency_errors && report.consistency_errors.length > 0;
+      const hasCommunication =
+        report.communication_errors && report.communication_errors.length > 0;
+      const hasLogic = report.logic_errors && report.logic_errors.length > 0;
+
+      const isAbsoluteSuccess =
+        !hasConsistency && !hasCommunication && !hasLogic;
+
+      if (isAbsoluteSuccess) {
+        setTopologyReport(report);
+        setTransformers(transformers);
+        setConsistencyErrors([]);
+        setIsSuccess(true);
+        setIsErrorModalOpen(true);
+        return;
+      }
+
+      if (hasConsistency) {
+        setConsistencyErrors(report.consistency_errors);
+        setIsSuccess(false);
+        setIsErrorModalOpen(true);
+      } else {
+        setTopologyReport(report);
+        setTransformers(transformers);
+        navigate("/circuits");
+      }
     } catch (err: any) {
       setApiError(
         err.response?.data || {
@@ -106,5 +177,15 @@ export function useTopologySubmission() {
     }
   };
 
-  return { submit, isLoading, apiError, setApiError };
+  return {
+    submit,
+    isLoading,
+    apiError,
+    setApiError,
+    handleLocalError,
+    isErrorModalOpen,
+    setIsErrorModalOpen,
+    consistencyErrors,
+    isSuccess,
+  };
 }

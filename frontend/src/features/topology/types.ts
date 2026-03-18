@@ -1,14 +1,23 @@
-// POSSÍVEIS CENÁRIOS
-export type TopologyType =
-  | "Paralelismo"
-  | "Seletividade Lógica com Barra Comum"
-  | "Seletividade Lógica Independente"
-  | "Cenário Não Identificado";
+export const TOPOLOGY_MAP = {
+  PARALLELISM: "Paralelismo",
+  LOGICAL_SELECTIVITY_COUPLED: "Seletividade Lógica com Barra Comum",
+  LOGICAL_SELECTIVITY_ISOLATED: "Seletividade Lógica Independente",
+  GENERIC: "Cenário Não Identificado",
+} as const;
 
-// CATEGORIAS DE ERRO
-export type ErrorCategory = "Formulário" | "Comunicação" | "Lógica";
+export type TopologyType = (typeof TOPOLOGY_MAP)[keyof typeof TOPOLOGY_MAP];
 
-// DETALHE DO ERRO
+export const getTopologyHelpers = (type: string | null) => {
+  return {
+    isParallel: type === TOPOLOGY_MAP.PARALLELISM,
+    isCommonBus: type === TOPOLOGY_MAP.LOGICAL_SELECTIVITY_COUPLED,
+    isIndependent: type === TOPOLOGY_MAP.LOGICAL_SELECTIVITY_ISOLATED,
+    showFeederList: type !== TOPOLOGY_MAP.PARALLELISM,
+  };
+};
+
+export type ErrorCategory = "Consistência" | "Comunicação" | "Lógica";
+
 export interface ErrorDetail {
   category: ErrorCategory;
   message: string;
@@ -21,7 +30,6 @@ export interface ErrorDetail {
   found?: string;
 }
 
-// RESUMO DO IED
 export interface IedSummary {
   name: string;
   relay_model: string;
@@ -37,7 +45,6 @@ export interface ConnectionEdge {
   errors: ErrorDetail[];
 }
 
-// RESPOSTA FINAL DO BACKEND
 export interface TopologyValidationResponse {
   filename: string;
   scenario: TopologyType;

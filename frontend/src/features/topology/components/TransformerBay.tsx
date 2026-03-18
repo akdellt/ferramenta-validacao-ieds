@@ -14,10 +14,12 @@ export const TransformerBay = ({
   isError,
   onClick,
 }: TransformerBayProps) => {
-  const mainColor = isError ? "var(--color-error)" : "var(--color-eq-primary)";
+  const color = isError ? "var(--color-error)" : "var(--color-eq-primary)";
+
+  const baseStrokeWidth = "3";
 
   const hoverClass = isError
-    ? "cursor-pointer group-hover:stroke-[3px] transition-all duration-200"
+    ? "cursor-pointer group-hover:stroke-[4px] transition-all duration-200"
     : "pointer-events-none";
 
   return (
@@ -25,6 +27,8 @@ export const TransformerBay = ({
       className={isError ? "group" : ""}
       onClick={isError ? onClick : undefined}
       style={{ cursor: isError ? "pointer" : "default" }}
+      stroke={color}
+      strokeWidth={baseStrokeWidth}
     >
       <line
         x1={x}
@@ -32,7 +36,6 @@ export const TransformerBay = ({
         x2={x + 80}
         y2={y}
         stroke="var(--color-eq-primary)"
-        strokeWidth="2"
         className={hoverClass}
       />
 
@@ -42,8 +45,7 @@ export const TransformerBay = ({
         width="30"
         height="30"
         fill="white"
-        stroke={mainColor}
-        strokeWidth="2"
+        stroke={color}
         className={hoverClass}
       />
       <line
@@ -52,7 +54,6 @@ export const TransformerBay = ({
         x2={x + 160}
         y2={y}
         stroke="var(--color-eq-primary)"
-        strokeWidth="2"
         className={hoverClass}
       />
 
@@ -62,9 +63,9 @@ export const TransformerBay = ({
           cy={y}
           r="20"
           fill="transparent"
-          stroke={mainColor}
-          className={`stroke-[2px] transition-all duration-200 ${
-            isError ? "group-hover:stroke-[3px]" : ""
+          stroke={color}
+          className={`transition-all duration-200 ${
+            isError ? "group-hover:stroke-[4px]" : ""
           }`}
         />
         <circle
@@ -72,14 +73,16 @@ export const TransformerBay = ({
           cy={y}
           r="20"
           fill="transparent"
-          stroke={mainColor}
-          className={`stroke-[2px] transition-all duration-200 ${
-            isError ? "group-hover:stroke-[3px]" : ""
+          stroke={color}
+          className={`transition-all duration-200 ${
+            isError ? "group-hover:stroke-[4px]" : ""
           }`}
         />
         <text
-          x={x + 175}
+          x={x + 192.5}
           y={y - 35}
+          stroke="none"
+          textAnchor="middle"
           className="fill-secondary text-xs font-bold select-none"
         >
           {name}
@@ -92,7 +95,6 @@ export const TransformerBay = ({
         x2={x + 280}
         y2={y}
         stroke="var(--color-eq-primary)"
-        strokeWidth="2"
         className={hoverClass}
       />
       <rect
@@ -101,8 +103,7 @@ export const TransformerBay = ({
         width="30"
         height="30"
         fill="white"
-        stroke={mainColor}
-        strokeWidth="2"
+        stroke={color}
         className={hoverClass}
       />
 
@@ -112,7 +113,6 @@ export const TransformerBay = ({
         x2={x + 360}
         y2={y}
         stroke="var(--color-eq-primary)"
-        strokeWidth="2"
         className={hoverClass}
       />
     </g>
