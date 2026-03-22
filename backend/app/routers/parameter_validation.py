@@ -8,7 +8,6 @@ from app.services.parameter_module.comparator import process_files
 from app.services.network_module.network_client import search_ied
 from app.exceptions import InvalidFileFormatError
 from app.models import NetworkIED
-from app.services.network_module.credentials import get_dynamic_password
 import json
 
 router = APIRouter(
@@ -110,10 +109,8 @@ async def fetch_ied_from_network(ied_name: str, db: Session = Depends(get_db)):
             detail=f"IED {ied_name} não encontrado."
         )
     
-    password = await get_dynamic_password(ied.name)
-
     try:
-        raw_content, remote_filename = await search_ied(ied, password)
+        raw_content, remote_filename = await search_ied(ied)
     except Exception as e:
         raise HTTPException(
             status_code=502,
@@ -121,7 +118,7 @@ async def fetch_ied_from_network(ied_name: str, db: Session = Depends(get_db)):
         )
 
     try:
-        parsed_data = parse_ied_file(raw_content.encode("utf-8"), remote_filename)
+        parsed_data = parse_ied_file(raw_content.encode("latin-1", errors="ignore"), remote_filename)
         return parsed_data
     except Exception as e:
         raise HTTPException(

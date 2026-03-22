@@ -27,7 +27,6 @@ class NetworkIED(Base):
     component_name: Mapped[str] = mapped_column(String)
     relay_model: Mapped[str] = mapped_column(String) 
     ip_address: Mapped[str] = mapped_column(String)
-    port: Mapped[int] = mapped_column(default=21)
     connection_type: Mapped[str] = mapped_column(String, default="FTP")
 
 class ValidationLog(Base):

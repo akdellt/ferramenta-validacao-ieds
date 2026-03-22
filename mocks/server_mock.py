@@ -5,32 +5,131 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-USER_TEST = os.getenv("IED_USER", "2AC")
+USER_TEST = os.getenv("IED_USER", "ACC")
 PASS_TEST = os.getenv("IED_PASSWORD", "OTTER")
-IED_RESPONSE = """
-    [INFO] RELAYTYPE=2414 FID=SEL-2414-RXXX-V0-Z012010-DXXXXXXXX BFID=BOOTLDR-R501-V0-Z000000-D20140224 PARTNO=241421A1A9X743A1840
-    DID,"XXXX #NOME ALIM" TID,"EQTL-XX SE XXX" CTR,"250" CTRN,"250" CTRX,"250" CTRX_W1,"250" CTRX_W2,"250" CTRX_W3,"250"
-    PTR,"120.00" EDEM,"THM" DMTC,"5" AI301NAM,"AI301" AI301TYP,"I" AI301L,"4.000" AI301H,"20.000" AI301EU,"mA" AI301EL,"4.000"
-    AI301EH,"20.000" AI301LW1,"OFF" AI301LW2,"OFF" AI301LAL,"OFF" AI301HW1,"OFF" AI301HW2,"OFF" AI301HAL,"OFF"
-    AI302NAM,"AI302" AI302TYP,"I" AI302L,"4.000" AI302H,"20.000" AI302EU,"mA" AI302EL,"4.000" AI302EH,"20.000"
-    AI302LW1,"OFF" AI302LW2,"OFF" AI302LAL,"OFF" AI302HW1,"OFF" AI302HW2,"OFF" AI302HAL,"OFF"
-    AI303NAM,"AI303" AI303TYP,"I" AI303L,"4.000" AI303H,"20.000" AI303EU,"mA" AI303EL,"4.000" AI303EH,"20.000"
-    AI303LW1,"OFF" AI303LW2,"OFF" AI303LAL,"OFF" AI303HW1,"OFF" AI303HW2,"OFF" AI303HAL,"OFF"
-    AI304NAM,"AI304" AI304TYP,"I" AI304L,"4.000" AI304H,"20.000" AI304EU,"mA" AI304EL,"4.000" AI304EH,"20.000"
-    AI304LW1,"OFF" AI304LW2,"OFF" AI304LAL,"OFF" AI304HW1,"OFF" AI304HW2,"OFF" AI304HAL,"OFF"
+IED_RESPONSE = """[INFO]
+RELAYTYPE=SEL-311C-1
+FID=SEL-311C-1-RXXX-V0-Z104101-DXXXXXXXX
+BFID=SLBT-3CF1-R102-V0-Z100100-DXXXXXXXX
+PARTNO=0311C11HM4K5442
+[1]
+RID,"XXXX"
+TID,"EQTL-XX SE XXX"
+CTR,"120"
+CTRN,"120"
+PTR,"600.00"
+PTRS,"600.00"
+VNOM,"66.40"
+Z1MAG,"7.80"
+Z1ANG,"84.00"
+Z0MAG,"24.80"
+Z0ANG,"81.50"
+Z0SMAG,"0.36"
+Z0SANG,"84.61"
+LL,"100.00"
+EADVS,"N"
+E21P,"N"
+E21MG,"N"
+E21XG,"3"
+E50P,"1"
+E50G,"1"
+E50Q,"N"
+E51P,"Y"
+E51G,"Y"
+E51Q,"N"
+E50BF,"N"
+E32,"AUTO"
+EOOS,"N"
+ELOAD,"N"
+ESOTF,"N"
+EVOLT,"N"
+E25,"N"
+EFLOC,"Y"
+EBBPT,"N"
+ECOMM,"N"
+E81,"N"
+E79,"N"
+EZ1EXT,"N"
+EZ1EXTP,"N"
+EZ1EXTG,"N"
+ECCVT,"N"
+ESV,"16"
+EDEM,"ROL"
+KGN,"OFF"
+INMTA,"0.00"
+Z0MTA,"72.47"
+27B81P,"40.00"
+59QW,"1.67"
+DMTC,"15"
+PDEMP,"OFF"
+NDEMP,"OFF"
+GDEMP,"OFF"
+QDEMP,"OFF"
+TDURD,"9.00"
+TDUR1D,"9.00"
+TDUR3D,"9.00"
+CFD,"60.00"
+3POD,"0.50"
+OPO,"52"
+27PO,"40.00"
+50LP,"0.25"
+TOPD,"2.00"
+TULO,"3"
+Z2GTSP,"N"
+67QGSP,"N"
+SV1DO,"60.00"
+SV1PU,"0.00"
+SV10DO,"60.00"
+SV10PU,"0.00"
+SV11DO,"0.00"
+SV11PU,"300.00"
+SV12DO,"12.00"
+SV12PU,"12.00"
+SV13DO,"0.00"
+SV13PU,"1800.00"
+SV14DO,"30.00"
+SV14PU,"6.00"
+SV15DO,"30.00"
+SV15PU,"7.25"
+SV16DO,"30.00"
+SV16PU,"8.50"
+SV2DO,"60.00"
+SV2PU,"0.00"
+SV3DO,"1.75"
+SV3PU,"300.00"
+SV4DO,"1800.00"
+SV4PU,"0.00"
+SV5DO,"0.00"
+SV5PU,"0.00"
+SV6DO,"0.00"
+SV6PU,"0.00"
+SV7DO,"0.00"
+SV7PU,"0.00"
+SV8DO,"30.00"
+SV8PU,"9.00"
+SV9DO,"0.00"
+SV9PU,"21.00"
+25ANG1,"25"
+25ANG2,"40"
+25RCF,"1.00"
+25SF,"0.042"
+25VHI,"75.00"
 """
 
 # CONFIGURAÇÃO FTP (Porta 21)
 def start_ftp():
     authorizer = DummyAuthorizer()
-    if not os.path.exists("./settings"): os.makedirs("./settings")
-    with open("./settings/SET_1.txt", "w") as f: f.write(IED_RESPONSE)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    settings_path = os.path.join(base_dir, "settings")
+    
+    if not os.path.exists(settings_path):
+        os.makedirs(settings_path)
 
-    authorizer.add_user(USER_TEST, PASS_TEST, ".", perm="elradfmwMT")
+    authorizer.add_user(USER_TEST, PASS_TEST, base_dir, perm="elradfmwMT")
     
     handler = FTPHandler
     handler.authorizer = authorizer
-    handler.banner = "SEL-2414 FTP Server Ready."
+    handler.banner = "FTP Server Ready."
     
     server = FTPServer(("0.0.0.0", 21), handler)
     print(" [FTP] Servidor rodando na porta 21...")
@@ -39,19 +138,19 @@ def start_ftp():
 # CONFIGURAÇÃO TELNET (Porta 23)
 def handle_telnet_client(conn, addr):
     try:
-        conn.sendall(b"login: ")
+        conn.sendall(b"login:")
         user = conn.recv(1024).decode().strip()
-        conn.sendall(b"password: ")
+        conn.sendall(b"\r\npassword:")
         password = conn.recv(1024).decode().strip()
 
         if user == USER_TEST and password == PASS_TEST:
-            conn.sendall(b"\r\nConnected to SEL-2414\r\n>")
+            conn.sendall(b"\r\nConnected to SEL 311-C\r\n>")
             while True:
                 data = conn.recv(1024).decode().strip().upper()
                 if not data: break
                 if data == "TAR":
-                    conn.sendall(IED_RESPONSE.encode("ascii") + b"\r\n>")
-                elif data == "EXIT":
+                    conn.sendall(IED_RESPONSE.encode("latin-1") + b"\r\n>")
+                elif data in ["EXIT", "QUIT"]:
                     break
                 else:
                     conn.sendall(b"\r\nCommand not found\r\n>")

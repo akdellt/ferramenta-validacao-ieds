@@ -17,7 +17,6 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         models.Base.metadata.create_all(bind=engine)
-
         master_reg = settings.MASTER_USER_REGISTRATION
         
         user = db.query(models.User).filter(models.User.registration == master_reg).first()
@@ -30,23 +29,6 @@ async def lifespan(app: FastAPI):
                 is_active=True
             )
             db.add(master_user)
-
-        sub_teste = "CLP"
-        comp_teste = "02T2"
-        ied_teste_nome = f"{sub_teste}_{comp_teste}"
-        ied = db.query(models.NetworkIED).filter(models.NetworkIED.name == ied_teste_nome).first()
-        
-        if not ied:
-            test_ied = models.NetworkIED(
-                name=ied_teste_nome,
-                substation=sub_teste,
-                component_name=comp_teste,
-                relay_model="SEL 2414",
-                ip_address="host.docker.internal",
-                port=21,
-                connection_type="FTP"
-            )
-            db.add(test_ied)
 
         db.commit()
     except Exception as e:
@@ -86,6 +68,10 @@ app.include_router(topology_validation.router, prefix=api_prefix)
 def root():
     return {"message": "Sistema rodando"}
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
     return JSONResponse(
@@ -110,6 +96,3 @@ async def generic_exception_handler(request: Request, exc: Exception):
         }
     )
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
