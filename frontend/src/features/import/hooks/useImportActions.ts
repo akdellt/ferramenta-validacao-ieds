@@ -313,7 +313,7 @@ export function useImportActions() {
     }
   };
 
-  const handleRemoveIedFile = (id: string) => {
+  const handleRemoveIedFile = (id: string | number) => {
     if (typeof id === "string") {
       setIedSlots((prev) =>
         prev.map((slot) => (slot.id === id ? { ...slot, file: null } : slot)),
