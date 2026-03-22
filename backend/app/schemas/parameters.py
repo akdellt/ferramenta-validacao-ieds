@@ -67,7 +67,6 @@ class NetworkIEDSchema(BaseModel):
     name: str
     relay_model: str
     ip_address: str
-    port: int
 
     class Config:
         from_attributes = True

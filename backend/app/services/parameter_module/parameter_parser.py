@@ -29,7 +29,7 @@ OA_METADATA_TERMS: set[str] = {
     "CONTROLE DE TAP E TEMPERATURA",
 }
 
-IED_PARAMETER_PATTERN = re.compile(r'([A-Za-z0-9]+),"([^"]*)"')
+IED_PARAMETER_PATTERN = re.compile(r'([A-Za-z0-9_\-]+)\s*[:=,]\s*"?([^"\r\n#]+)"?')
 IED_IGNORED_KEYS: set[str] = {"RELAYTYPE", "BFID", "PARTNO", "RID", "TID", "INFO", "DID"}
 
 MAX_XLSX_SIZE_BYTES: int = 5 * 1024 * 1024
@@ -212,15 +212,18 @@ def parse_oa_file(content: bytes, filename: str) -> OAFilesData:
 def parse_ied_parameters(text: str) -> list[CurrentParameter]:
     param_list = []
 
-    for key, value in IED_PARAMETER_PATTERN.findall(text):
-        if key in IED_IGNORED_KEYS:
+    clean_text = "".join(ch for ch in text if ch.isprintable() or ch in "\n\r\t")
+
+    for key, value in IED_PARAMETER_PATTERN.findall(clean_text):
+        upper_key = key.upper()
+        if upper_key in IED_IGNORED_KEYS:
             continue
         
-        clean_value = value.split("#")[0].strip().replace('"', '')
+        clean_value = value.split("#")[0].strip().replace('"', '').replace("'", "")
 
         if clean_value:
             param_list.append(CurrentParameter(
-                parameter=key,
+                parameter=upper_key,
                 current_value=clean_value
             ))
 
@@ -231,13 +234,17 @@ def parse_ied_file(content: bytes, filename: str) -> IEDFilesData:
     if not content:
         raise EmptyFileError(filename=filename)
 
-    text = content.decode("utf-8", errors="ignore")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1", errors="ignore")
     
-    relay_match = re.search(r"FID=([^\s]+)", text)
+    relay_match = re.search(r"(?:FID|RELAYTYPE)\s*[:=,]\s*([^\s,\r\n]+)", text, re.I)
+    
     if not relay_match:
-        raise IEDNotIdentifiedError(filename=filename)
-    
-    relay_model = format_relay_name(relay_match.group(1))
+        relay_model = "MODELO DESCONHECIDO"
+    else:
+        relay_model = format_relay_name(relay_match.group(1))
 
     params = parse_ied_parameters(text)
 
