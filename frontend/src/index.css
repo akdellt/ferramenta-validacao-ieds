@@ -44,3 +44,30 @@
     scrollbar-color: #cbd5e1 transparent;
   }
 }
+
+.diagram-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background-color: #f4f6f8;
+  overflow: auto;
+  position: relative;
+}
+
+.circuit-svg line,
+.circuit-svg rect {
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+}
+
+.circuit-svg circle {
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
+}
+
+.circuit-svg text {
+  shape-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}

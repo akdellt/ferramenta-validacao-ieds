@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, CheckCircle2 } from "lucide-react";
 import Card from "../../../components/common/Card";
 import type { ErrorDetail, ErrorCategory } from "../types";
 
@@ -7,10 +7,11 @@ interface CircuitErrorModalProps {
   onClose: () => void;
   IedName: string | null;
   errors: ErrorDetail[];
+  isSuccess?: boolean;
 }
 
 const categoryStyles: Record<ErrorCategory, string> = {
-  Formulário: "bg-eq-secondary",
+  Consistência: "bg-eq-secondary",
   Comunicação: "bg-[#3883da]",
   Lógica: "bg-primary",
 };
@@ -20,14 +21,18 @@ export const CircuitErrorModal = ({
   onClose,
   IedName,
   errors,
+  isSuccess = false,
 }: CircuitErrorModalProps) => {
   if (!isOpen) return null;
+
+  const themeColor = isSuccess ? "border-t-success" : "border-t-error";
+  const titleText = isSuccess ? "VALIDAÇÃO BEM-SUCEDIDA" : `ERROS: ${IedName}`;
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <Card
-        title={`ERROS: ${IedName}`}
-        className="border-t-error relative max-h-[90vh] w-full max-w-2xl border-t-4 shadow-2xl"
+        title={titleText}
+        className={`${themeColor} relative max-h-[90vh] w-full max-w-2xl border-t-4 shadow-2xl`}
       >
         <button
           onClick={onClose}
@@ -37,7 +42,27 @@ export const CircuitErrorModal = ({
         </button>
 
         <div className="custom-scrollbar flex-1 space-y-4 overflow-y-auto pr-2">
-          {errors.length === 0 ? (
+          {isSuccess ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <CheckCircle2
+                size={80}
+                className="text-success animate-in zoom-in mb-6 duration-300"
+              />
+              <h3 className="text-primary mb-2 text-xl font-bold">
+                Projeto consistente!
+              </h3>
+              <p className="text-text-muted max-w-md">
+                A topologia física preenchida corresponde exatamente ao
+                mapeamento lógico fornecido.
+              </p>
+              <button
+                onClick={onClose}
+                className="bg-success hover:bg-success mt-8 rounded-lg px-8 py-2 font-bold text-white transition-all active:scale-95"
+              >
+                VISUALIZAR CIRCUITO
+              </button>
+            </div>
+          ) : errors.length === 0 ? (
             <p className="text-text-muted py-8 text-center text-sm">
               Nenhum erro encontrado.
             </p>
@@ -65,7 +90,7 @@ export const CircuitErrorModal = ({
                       <span className="mb-1 block text-xs font-bold tracking-tighter text-green-700/60 uppercase">
                         Esperado
                       </span>
-                      <code className="font-mono text-sm font-bold break-all text-green-700">
+                      <code className="font-mono text-sm font-bold break-all whitespace-pre-line text-green-700">
                         {err.expected || "N/A"}
                       </code>
                     </div>
@@ -73,7 +98,7 @@ export const CircuitErrorModal = ({
                       <span className="text-error/60 mb-1 block text-xs font-bold tracking-tighter uppercase">
                         Encontrado
                       </span>
-                      <code className="text-error font-mono text-sm font-bold break-all italic">
+                      <code className="text-error font-mono text-sm font-bold break-all whitespace-pre-line italic">
                         {err.found || "N/A"}
                       </code>
                     </div>
