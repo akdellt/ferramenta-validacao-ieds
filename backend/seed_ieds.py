@@ -9,19 +9,19 @@ def seed():
     # LISTA DE IEDS
     ieds_to_add = [
         {
-            "name": "CLP_02T2", 
+            "name": "SLZ_13T1", 
             "substation": "CLP", 
-            "component_name": "02T2", 
-            "relay_model": "SEL 2414", 
-            "ip_address": "host.docker.internal", 
+            "component_name": "13T1", 
+            "relay_model": "SEL 751", 
+            "ip_address": "10.9.24.110", 
             "connection_type": "FTP"
         },
         {
-            "name": "ITAQUI_12L1", 
+            "name": "SLZ_13T2", 
             "substation": "CLP", 
-            "component_name": "12L1", 
-            "relay_model": "SEL 311C", 
-            "ip_address": "192.168.1.41",
+            "component_name": "13T2", 
+            "relay_model": "SEL 751", 
+            "ip_address": "10.9.24.110",
             "connection_type": "TELNET"
         },
     ]

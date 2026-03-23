@@ -51,32 +51,39 @@ async def search_ied(ied: NetworkIED) -> tuple[str, str]:
     # TENTATIVA VIA TELNET (DUMP DE DADOS)
     async def try_telnet():
         reader, writer = await asyncio.wait_for(
-            telnetlib3.open_connection(ied.ip_address, 23), timeout=15
+            telnetlib3.open_connection(ied.ip_address, 23), timeout=20
         )
         writer = cast(telnetlib3.TelnetWriter, writer)  
         
         # ENVIA COMANDO DE BUSCA DE DADOS DAS CONIGURAÇÕES
         try:
-            await asyncio.wait_for(reader.readuntil(b"login:"), timeout=10)
-            writer.write(USER + "\r")
+            await asyncio.wait_for(reader.readuntil(b":"), timeout=10)
+            writer.write(USER + "\r\n")
+            await writer.drain()
+            
+            await asyncio.sleep(0.5)
 
-            await asyncio.wait_for(reader.readuntil(b"password:"), timeout=10)
-            writer.write(PASSWORD + "\r")
+            await asyncio.wait_for(reader.readuntil(b":"), timeout=10)
+            writer.write(PASSWORD + "\r\n")
+            await writer.drain()
 
             await asyncio.wait_for(reader.readuntil(b">"), timeout=10)
-            writer.write("TAR\r")
+            writer.write("TAR\r\n")
+            await writer.drain()
             
             try:
                 raw_output = await asyncio.wait_for(reader.read(100000), timeout=20)
+            except asyncio.IncompleteReadError as e:
+                raw_output = e.partial
             except asyncio.TimeoutError:
                 raw_output = b""
 
             output = raw_output if isinstance(raw_output, str) else bytes(raw_output).decode("latin-1", errors="ignore")
 
-            if not output.strip():
+            if not output.replace("END_OF_DUMP", "").strip():
                 raise Exception("IED não retornou dados via Telnet")
             
-            return output.strip(), "SET_1_DUMP.txt"
+            return output.replace("END_OF_DUMP", "").strip(), "SET_1_DUMP.txt"
         finally:
             writer.close()
 
