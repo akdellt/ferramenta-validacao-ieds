@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.getcwd())
+
 from app.database import SessionLocal, engine
 from app import models
 from app.models import NetworkIED
@@ -10,7 +15,7 @@ def seed():
     ieds_to_add = [
         {
             "name": "SLZ_13T1", 
-            "substation": "CLP", 
+            "substation": "SLZ", 
             "component_name": "13T1", 
             "relay_model": "SEL 751", 
             "ip_address": "10.9.24.110", 
@@ -18,7 +23,7 @@ def seed():
         },
         {
             "name": "SLZ_13T2", 
-            "substation": "CLP", 
+            "substation": "SLZ", 
             "component_name": "13T2", 
             "relay_model": "SEL 751", 
             "ip_address": "10.9.24.110",

@@ -6,7 +6,7 @@ from app.schemas.parameters import *
 from app.services.parameter_module.parameter_parser import parse_oa_file, parse_ied_file
 from app.services.parameter_module.comparator import process_files
 from app.services.network_module.network_client import search_ied
-from app.exceptions import InvalidFileFormatError
+from app.exceptions import InvalidFileFormatError, IEDTimeoutError, IEDAuthError, IEDConnectionError
 from app.models import NetworkIED
 import json
 
@@ -45,7 +45,7 @@ async def process_upload_files[T](
 async def read_oa_files(files: list[UploadFile] = File(...)):
     return await process_upload_files(
         files=files,
-        valid_extensions=(".xlsx", ".xls"),
+        valid_extensions=(".xlsx",),
         read_func=parse_oa_file,
         default_name="unnamed_oa.xlsx"
     )
@@ -111,11 +111,14 @@ async def fetch_ied_from_network(ied_name: str, db: Session = Depends(get_db)):
     
     try:
         raw_content, remote_filename = await search_ied(ied)
+    except IEDTimeoutError as e:
+        raise HTTPException(status_code=408, detail=str(e))
+    except IEDAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except IEDConnectionError as e:
+        raise HTTPException(status_code=409, detail=str(e)) 
     except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Falha de conexão com o IED (Rede): {str(e)}"
-        )
+        raise HTTPException(status_code=502, detail=f"Erro inesperado: {str(e)}")
 
     try:
         parsed_data = parse_ied_file(raw_content.encode("latin-1", errors="ignore"), remote_filename)

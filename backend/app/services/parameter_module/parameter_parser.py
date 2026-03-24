@@ -200,7 +200,7 @@ def parse_oa_file(content: bytes, filename: str) -> OAFilesData:
         )
 
     except InvalidFileException:
-        raise InvalidFileFormatError(filename=filename, accepted_formats=".xlsx, .xls")
+        raise InvalidFileFormatError(filename=filename, accepted_formats=".xlsx")
     except Exception as e:
         if isinstance(e, (EmptyFileError, InvalidFileFormatError, InvalidFileContentError)):
             raise e

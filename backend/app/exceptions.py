@@ -105,3 +105,8 @@ class EngineeringRuleError(AppException):
             filename=filename,
             details=details
         )
+
+# CONEXÃO COM REDE
+class IEDTimeoutError(Exception): pass
+class IEDAuthError(Exception): pass
+class IEDConnectionError(Exception): pass

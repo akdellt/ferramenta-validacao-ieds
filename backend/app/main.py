@@ -7,7 +7,7 @@ import traceback
 
 from .exceptions import AppException
 from .database import engine, SessionLocal
-from .routers import logs, parameter_validation, auth, topology_validation
+from .routers import logs, parameter_validation, auth, topology_validation, health
 from .core.security import get_password_hash
 from .core.config import settings
 from . import models
@@ -63,6 +63,7 @@ app.include_router(auth.router, prefix=api_prefix)
 app.include_router(parameter_validation.router, prefix=api_prefix)
 app.include_router(logs.router, prefix=api_prefix)
 app.include_router(topology_validation.router, prefix=api_prefix)
+app.include_router(health.router, prefix=api_prefix)
 
 @app.get("/")
 def root():

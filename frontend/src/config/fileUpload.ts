@@ -1,7 +1,7 @@
 export const FILE_CONFIG = {
   OA: {
     maxSizeMB: 5,
-    accept: ".xlsx,.xls",
+    accept: ".xlsx",
     emptyMessage: "Nenhuma Ordem de Ajuste importada",
   },
   IED: {

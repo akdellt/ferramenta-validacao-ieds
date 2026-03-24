@@ -34,7 +34,7 @@ export function useImportActions() {
     setApiError({
       error: "ValidationError",
       message: message,
-      details: title,
+      detail: title,
     });
   };
 
@@ -210,14 +210,16 @@ export function useImportActions() {
     setApiError(null);
 
     if (id === "BATCH_SEARCH") {
-      const idsParaBuscar = payload as string[];
+      const iedsToFetch = payload as string[];
       setLoading(true);
 
-      try {
-        let slotsAtualizados = [...iedSlots];
+      const foundErrors: string[] = [];
 
-        for (const slotId of idsParaBuscar) {
-          const slot = slotsAtualizados.find((s) => s.id === slotId);
+      try {
+        let updatedSlots = [...iedSlots];
+
+        for (const slotId of iedsToFetch) {
+          const slot = updatedSlots.find((s) => s.id === slotId);
           if (slot?.name && !slot.file) {
             try {
               const networkData = await networkService.fetchIedData(slot.name);
@@ -229,20 +231,30 @@ export function useImportActions() {
                 isNetwork: true,
               };
 
-              slotsAtualizados = slotsAtualizados.map((s) =>
+              updatedSlots = updatedSlots.map((s) =>
                 s.id === slotId ? { ...s, file: virtualFile } : s,
               );
-            } catch (err) {
+            } catch (err: any) {
               console.error(`Falha no IED ${slot.relay_model}`, err);
-              handleLocalError(
-                `Não foi possível conectar ao relé ${slot.relay_model}. Verifique o IP.`,
-                "Erro de Rede",
+
+              const errorMessage =
+                err.message || `Erro ao conectar com ${slot.relay_model}.`;
+              foundErrors.push(
+                `${slot.name || slot.relay_model}: ${errorMessage}`,
               );
             }
           }
         }
 
-        setIedSlots(slotsAtualizados);
+        setIedSlots(updatedSlots);
+
+        if (foundErrors.length > 0) {
+          const finalMessage = foundErrors.join("\n");
+          handleLocalError(
+            finalMessage,
+            `Falha na busca de ${foundErrors.length} IED(s)`,
+          );
+        }
       } catch (err: any) {
         setApiError(err);
       } finally {
@@ -307,6 +319,11 @@ export function useImportActions() {
         );
       }
     } catch (err: any) {
+      const msg = err.message || "Falha na operação de rede.";
+      handleLocalError(
+        msg,
+        `Erro no IED ${targetSlot.name || targetSlot.relay_model}`,
+      );
       setApiError(err);
     } finally {
       setLoading(false);

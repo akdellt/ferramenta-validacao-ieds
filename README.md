@@ -47,6 +47,14 @@ Para liberar a busca de dados via FTP/Telnet de forma simulada, siga esses passo
    python mocks/server_mock.py
    ```
 
+## Dados de Teste
+
+Para popular o banco com IEDs de exemplo e ter dados para testar o módulo de rede:
+
+```bash
+docker exec -it fast_backend python scripts/seed_ieds.py
+```
+
 ## Acessos rápidos
 
 - Frontend: http://localhost:5173
@@ -96,14 +104,13 @@ Para liberar a busca de dados via FTP/Telnet de forma simulada, siga esses passo
 [x] Extração e validação de arquivos .SCD  
 [x] Sistema de autenticação e gestão de históricos  
 [x] Refatoração do código  
-[x] Módulo de rede FTP/Telnet (simulação do sistema)  
-[x] Tela de formulário de subestação    
-[x] Visualização gráfica dos erros de validação  
+[x] Tela de formulário de subestação  
+[x] Visualização gráfica dos erros de validação
 
 ### Em desenvolvimento
 
-[ ] Requisição de senhas para acesso dos IEDs  
-[ ] Implementação de testes  
+[ ] Módulo de rede FTP/Telnet (testes em ambiente real)  
+[ ] Implementação de testes
 
 ### A implementar
 
