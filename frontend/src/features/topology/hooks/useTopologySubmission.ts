@@ -95,7 +95,7 @@ export function useTopologySubmission() {
     setApiError({
       error: "ValidationError",
       message: msg,
-      details: title,
+      detail: title,
     });
   };
 

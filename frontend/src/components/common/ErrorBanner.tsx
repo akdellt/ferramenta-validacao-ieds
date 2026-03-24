@@ -30,7 +30,7 @@ export function ErrorBanner({ error, onClose }: ErrorBannerProps) {
 
             <div className="flex flex-col gap-1">
               <h3 className="text-error text-lg font-semibold">
-                {error.details || "Erro no Processamento"}
+                {error.detail || "Erro no Processamento"}
               </h3>
               <p className="text-secondary whitespace-pre-wrap">
                 {error.message}

@@ -12,35 +12,29 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<BackendError>) => {
     if (error.response && error.response.data) {
-      const data = error.response.data;
+      const data = error.response.data as any;
 
       const errorTitle = data.error || "Erro";
-      const errorMessage = data.message || data.details || "Falha na operação";
+      const errorMessage = data.detail || "Falha na operação";
 
       console.error(
         `[API ${error.response.status}]: ${errorTitle} - ${errorMessage}`,
       );
 
       // remover depois
-      if (data.details) {
-        console.debug("Detalhes da falha:", data.details);
+      if (data.detail) {
+        console.debug("Detalhes da falha:", data.detail);
       }
 
       return Promise.reject({
-        error: errorTitle,
+        response: error.response,
         message: errorMessage,
-        details: data.details,
+        error: errorTitle,
+        isAxiosError: true,
       });
     }
 
-    const networkError: BackendError = {
-      error: "NetworkError",
-      message:
-        "Não foi possível conectar ao servidor. Verifique se o backend está rodando.",
-      path: error.config?.url,
-    };
-
-    return Promise.reject(networkError);
+    return Promise.reject(new Error("Erro de rede: Verifique sua conexão."));
   },
 );
 

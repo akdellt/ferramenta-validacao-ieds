@@ -1,6 +1,7 @@
 import os
 import threading
 import socket
+import time
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
@@ -138,24 +139,26 @@ def start_ftp():
 # CONFIGURAÇÃO TELNET (Porta 23)
 def handle_telnet_client(conn, addr):
     try:
-        conn.sendall(b"login:")
+        conn.sendall(b"login: ")
         user = conn.recv(1024).decode().strip()
-        conn.sendall(b"\r\npassword:")
+        conn.sendall(b"\r\npassword: ")
         password = conn.recv(1024).decode().strip()
 
         if user == USER_TEST and password == PASS_TEST:
-            conn.sendall(b"\r\nConnected to SEL 311-C\r\n>")
+            conn.sendall(b"\r\n=>")
             while True:
                 data = conn.recv(1024).decode().strip().upper()
                 if not data: break
-                if data == "TAR":
-                    conn.sendall(IED_RESPONSE.encode("latin-1") + b"\r\n>")
+                if data == "SHO 1":
+                    conn.sendall(b"\r\n" + IED_RESPONSE.encode("latin-1") + b"\r\n=>")
                 elif data in ["EXIT", "QUIT"]:
                     break
                 else:
                     conn.sendall(b"\r\nCommand not found\r\n>")
         else:
+            print(f" [MOCK] Falha de login para o usuário: {user}")
             conn.sendall(b"\r\nLogin Incorrect\r\n")
+            time.sleep(1.5)
     finally:
         conn.close()
 
