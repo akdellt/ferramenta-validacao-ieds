@@ -1,51 +1,65 @@
-import React from "react";
+import { useImportActions } from "../features/import/hooks/useImportActions";
+import { ErrorBanner } from "../components/common/ErrorBanner";
+import ImportSection from "../features/import/components/ImportSection";
+import { Button } from "../components/common/Button";
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  isLoading?: boolean;
-  variant?: "primary" | "secondary" | "outline" | "danger";
-  children: React.ReactNode;
-}
-
-export function Button({
-  isLoading,
-  variant = "primary",
-  children,
-  className = "",
-  disabled,
-  ...props
-}: ButtonProps) {
-  const baseStyles =
-    "flex items-center justify-center gap-2 rounded-lg text-sm font-bold tracking-wider shadow-lg transition-all outline-none disabled:cursor-not-allowed disabled:opacity-70";
-
-  const variants = {
-    primary:
-      "px-12 py-3 bg-eq-primary text-white hover:bg-eq-primary/90 active:scale-95 disabled:bg-gray-400 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0",
-    secondary:
-      "px-12 py-3 bg-eq-secondary text-white hover:bg-eq-secondary/90 active:scale-95",
-    outline:
-      "border-2 border-eq-secondary text-eq-secondary bg-transparent font-medium hover:bg-eq-secondary hover:text-white active:scale-95",
-    danger: "px-12 py-3 bg-error text-white hover:bg-error/90",
-  };
-
-  const spinnerColor =
-    variant === "outline" ? "border-eq-secondary" : "border-white";
+function ImportPage() {
+  const {
+    loading,
+    apiError,
+    setApiError,
+    oaFiles,
+    iedSlots,
+    handleLocalError,
+    handleAddOaFiles,
+    handleVerify,
+    handleRemoveOaFile,
+    handleBatchIedUpload,
+    handleUpdateIedSlot,
+    handleRemoveIedFile,
+  } = useImportActions();
 
   return (
-    <button
-      {...props}
-      disabled={isLoading || disabled}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
-    >
-      {isLoading ? (
-        <>
-          <div
-            className={`h-4 w-4 animate-spin rounded-full border-2 border-t-transparent ${spinnerColor}`}
+    <div className="flex h-full w-full flex-1 flex-col items-center overflow-y-auto p-8 py-12">
+      <h1 className="text-primary mb-10 text-center text-3xl font-bold tracking-wide">
+        IMPORTAÇÃO DE ARQUIVOS
+      </h1>
+
+      <ErrorBanner error={apiError} onClose={() => setApiError(null)} />
+
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <ImportSection
+            title="Ordens de Ajuste (Excel)"
+            fileType="OA"
+            oaFiles={oaFiles}
+            onAddFiles={handleAddOaFiles}
+            onRemoveFile={handleRemoveOaFile}
+            onError={handleLocalError}
           />
-          <span>PROCESSANDO...</span>
-        </>
-      ) : (
-        children
-      )}
-    </button>
+          <ImportSection
+            title="Arquivos de Campo (IEDs)"
+            fileType="IED"
+            iedSlots={iedSlots}
+            onUpdateSlot={handleUpdateIedSlot}
+            onRemoveFile={handleRemoveIedFile}
+            onAddFiles={handleBatchIedUpload}
+            onError={handleLocalError}
+          />
+        </div>
+
+        <div className="mt-10 flex justify-end">
+          <Button
+            onClick={handleVerify}
+            isLoading={loading}
+            disabled={!iedSlots.some((s) => s.file) || loading}
+          >
+            VERIFICAR
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
+
+export default ImportPage;

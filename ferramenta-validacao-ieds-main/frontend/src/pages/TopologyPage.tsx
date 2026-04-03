@@ -86,8 +86,9 @@ function TopologyPage() {
   useEffect(() => {
     if (topologyType) {
       resetTopologyState(topologyType);
+      setScdFile(null); // Reseta o arquivo ao trocar o tipo de topologia
     }
-  }, [topologyType, resetTopologyState]);
+  }, [topologyType, resetTopologyState, setScdFile]);
 
   return (
     <div className="flex h-full w-full flex-1 flex-col items-center overflow-y-auto p-8 py-12">
