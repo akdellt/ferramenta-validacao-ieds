@@ -2,12 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 class Settings(BaseSettings):
-    # DADOS DO USUÁRIO MASTER
-    MASTER_USER_REGISTRATION: str = "A111"
-    MASTER_USER_NAME: str = "ADMIN_EQUATORIAL"
-    MASTER_USER_PASSWORD: str
-
-    # BANCO DE DADOS ---
+    # BANCO DE DADOS
     DATABASE_URL: str = "sqlite:///./local_test.db"
 
     # CREDENCIAIS GERAIS DOS IEDS

@@ -10,13 +10,11 @@ def validate_communication_rules(topology: TopologyResponse) -> list[ErrorDetail
         mac = ied.communication.mac_address
         if mac is not None:
             if mac in mac_addresses:
-                first_ied = mac_addresses[mac]
                 comm_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.COMMUNICATION,
                         message=f"Endereço MAC duplicado detectado.",
                         device=ied.name,
-                        related_to=first_ied,
                         expected="MAC Único",
                         found=mac
                     )
@@ -42,13 +40,11 @@ def validate_communication_rules(topology: TopologyResponse) -> list[ErrorDetail
         app_id = ied.communication.app_id
         if app_id:
             if app_id in app_ids:
-                first_ied = app_ids[app_id]
                 comm_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.COMMUNICATION,
                         message=f"APPID duplicado detectado.",
-                        device=ied.name,        
-                        related_to=first_ied,
+                        device=ied.name,
                         expected="APPID Único",
                         found=app_id
                     )

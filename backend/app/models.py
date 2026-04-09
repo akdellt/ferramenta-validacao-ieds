@@ -6,18 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
-class User(Base):
-    __tablename__ = "users"
-
-    registration: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String)
-    
-    name: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True)
-    role: Mapped[str] = mapped_column(String, default="Tecnico")
-
-    logs: Mapped[list["ValidationLog"]] = relationship(back_populates="owner")
-
 class NetworkIED(Base):
     __tablename__ = "network_ieds"
 
@@ -27,7 +15,7 @@ class NetworkIED(Base):
     component_name: Mapped[str] = mapped_column(String)
     relay_model: Mapped[str] = mapped_column(String) 
     ip_address: Mapped[str] = mapped_column(String)
-    connection_type: Mapped[str] = mapped_column(String, default="FTP")
+    connection_type: Mapped[str] = mapped_column(String, default="TELNET")
 
 class ValidationLog(Base):
     __tablename__ = "validation_logs"
@@ -46,9 +34,3 @@ class ValidationLog(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     validation_source: Mapped[str] = mapped_column(String, default="FILE")
-    
-    user_registration: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.registration"), nullable=True
-    )
-    
-    owner: Mapped["User | None"] = relationship(back_populates="logs")

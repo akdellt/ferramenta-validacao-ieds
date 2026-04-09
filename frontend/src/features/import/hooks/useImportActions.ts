@@ -1,22 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
-import { api, iedService } from "../../../services/api";
+
+import { useSession } from "../../../context/SessionContext";
 import { useValidation } from "../../../context/ValidationContext";
+import { api, iedService } from "../../../services/api";
+import { networkService } from "../../../services/api";
+
 import { type BackendError } from "../../../types/error";
 import type { ValidationResult } from "../../../types/parameters";
 import type { IedSlotData } from "../../../types/parameters";
 import { performIedMatch } from "../../../features/import/iedMatcher";
-import { networkService } from "../../../services/api";
 
 export function useImportActions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useSession();
 
   const { oaFiles, setOaFiles, iedSlots, setIedSlots, setReportResults } =
     useValidation();
 
   const [loading, setLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [apiError, setApiError] = useState<BackendError | null>(null);
   const [dbIeds, setDbIeds] = useState<any[]>([]);
 
@@ -349,7 +352,8 @@ export function useImportActions() {
       return;
     }
 
-    setLoading(true);
+    setIsVerifying(true);
+    setApiError(null);
 
     const formData = new FormData();
     const iedDataPayload: any[] = [];
@@ -389,7 +393,7 @@ export function useImportActions() {
               filename_oa: nameSlot?.filename_oa || "desconhecido.xlsx",
               filename_ied: nameSlot?.file?.name || "desconhecido.txt",
               status: result.status || "Divergente",
-              user_registration: user?.registration || "A111",
+              user_registration: user.registration,
               result_json: result.parameters_list || [],
             };
             return api.post("/logs/", logEntry).catch(() => {});
@@ -401,17 +405,15 @@ export function useImportActions() {
 
       navigate("/results");
     } catch (err: any) {
-      setLoading(false);
-      setTimeout(() => {
-        setApiError(err as BackendError);
-      }, 10);
+      setApiError(err as BackendError);
     } finally {
-      setLoading(false);
+      setIsVerifying(false);
     }
   };
 
   return {
     loading,
+    isVerifying,
     apiError,
     setApiError,
     oaFiles,

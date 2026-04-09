@@ -1,10 +1,12 @@
+import { useState } from "react";
+
 import Card from "../../../components/common/Card";
 import DropzoneArea from "../../../components/common/DropzoneArea";
-import FileItem from "./FileItem";
-import FileSlot from "./FileSlot";
+import { Button } from "../../../components/common/Button";
 import { FILE_CONFIG, type FileType } from "../../../config/fileUpload";
 import type { IedSlotData } from "../../../types/parameters";
-import { Button } from "../../../components/common/Button";
+import FileItem from "./FileItem";
+import FileSlot from "./FileSlot";
 
 interface ImportSectionProps {
   title: string;
@@ -15,7 +17,7 @@ interface ImportSectionProps {
 
   onAddFiles?: (files: File[]) => void;
   onRemoveFile?: (id: number | string) => void;
-  onUpdateSlot?: (id: string, file: File | string) => void;
+  onUpdateSlot?: (id: string, file: File | string) => void | Promise<void>;
   onError?: (msg: string, title?: string) => void;
 }
 
@@ -30,6 +32,7 @@ function ImportSection({
   onError,
 }: ImportSectionProps) {
   const config = FILE_CONFIG[fileType];
+  const [isFetchingNetwork, setIsFetchingNetwork] = useState(false);
 
   const handleDropzoneReceive = (files: File[]) => {
     if (onAddFiles) {
@@ -37,7 +40,7 @@ function ImportSection({
     }
   };
 
-  const handleFetchAllFromNetwork = () => {
+  const handleFetchAllFromNetwork = async () => {
     const slotsToFetch = iedSlots
       .filter((s) => s.name && !s.file)
       .map((s) => s.id);
@@ -47,7 +50,14 @@ function ImportSection({
       return;
     }
 
-    onUpdateSlot?.("BATCH_SEARCH", slotsToFetch as any);
+    setIsFetchingNetwork(true);
+
+    try {
+      await onUpdateSlot?.("BATCH_SEARCH", slotsToFetch as any);
+    } catch (err) {
+    } finally {
+      setIsFetchingNetwork(false);
+    }
   };
 
   return (
@@ -101,7 +111,8 @@ function ImportSection({
             <Button
               variant="outline"
               onClick={handleFetchAllFromNetwork}
-              disabled={iedSlots.every((s) => !s.name)}
+              disabled={iedSlots.every((s) => !s.name) || isFetchingNetwork}
+              isLoading={isFetchingNetwork}
               className="px-6 py-2 shadow-none"
             >
               BUSCAR NA REDE

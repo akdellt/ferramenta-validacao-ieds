@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { User2, Trash2, LogOut } from "lucide-react";
+import { Trash2, DatabaseIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
+
 import EQ from "../../assets/EQ.svg";
 import { useSidebar } from "../../hooks/useSidebar";
-import { useAuth } from "../../context/AuthContext";
 import ConfirmDelete from "../common/ConfirmDelete";
+import InventoryModal from "../common/InventoryModal";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -36,17 +37,10 @@ function SidebarItem({
 }
 
 function Sidebar() {
-  const { user } = useAuth();
-
-  const {
-    menuItems,
-    handleClearData,
-    isProfileOpen,
-    toggleProfile,
-    handleLogout,
-  } = useSidebar();
+  const { menuItems, handleClearData } = useSidebar();
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
 
   const confirmAndClear = () => {
     handleClearData();
@@ -84,28 +78,10 @@ function Sidebar() {
         </nav>
 
         <div className="relative mt-auto flex w-full flex-col gap-5 px-3">
-          {isProfileOpen && (
-            <div className="animate-in fade-in zoom-in border-eq-border absolute bottom-16 left-full ml-2 w-48 overflow-hidden rounded-xl border bg-white shadow-2xl duration-200">
-              <div className="border-eq-border border-b bg-white px-4 py-3">
-                <p className="text-eq-primary text-[12px] font-black tracking-tighter uppercase">
-                  {user?.name || "Usuário"}
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="text-error flex w-full cursor-pointer items-center gap-3 px-4 py-4 text-sm font-bold transition-colors hover:bg-rose-50"
-              >
-                <LogOut size={18} />
-                SAIR DO SISTEMA
-              </button>
-            </div>
-          )}
-
           <SidebarItem
-            icon={<User2 size={32} />}
-            label="Perfil"
-            isActive={isProfileOpen}
-            onClick={toggleProfile}
+            icon={<DatabaseIcon size={32} />}
+            label="Importar inventário IEDs"
+            onClick={() => setIsInventoryModalOpen(true)}
           />
           <SidebarItem
             icon={<Trash2 size={32} />}
@@ -114,6 +90,11 @@ function Sidebar() {
           />
         </div>
       </aside>
+
+      <InventoryModal
+        isOpen={isInventoryModalOpen}
+        onClose={() => setIsInventoryModalOpen(false)}
+      />
 
       <ConfirmDelete
         isOpen={isDeleteModalOpen}

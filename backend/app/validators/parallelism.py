@@ -26,8 +26,7 @@ def validate_parallelism_topology(topology: TopologyResponse) -> list[ErrorDetai
             errors.append(ErrorDetail(
                 category=ErrorCategory.LOGIC,
                 message=f"Este IED não está conectado ao IED parceiro",
-                publisher=missing,
-                subscriber=current_name,
+                device=ied.name,
                 expected=f"Conexão com {missing}",
                 found=f"IED {missing} ausente nos Inputs"
             ))
@@ -115,9 +114,7 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                 vb_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
                     message=f"{ied.name} tenta ouvir {target} sem mapeamento de Virtual Bit",
-                    publisher=target,
-                    subscriber=ied.name,
-                    affected_signal=obj_ref
+                    device=target
                 ))
                 continue
 
@@ -127,7 +124,6 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                     category=ErrorCategory.LOGIC,
                     message=f"Múltiplos sinais apontando para {vb}",
                     device=ied.name,
-                    affected_signal=obj_ref,
                     expected="VB Única",
                     found=vb
                 ))
@@ -144,7 +140,6 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
             if vb_upper.startswith("VB"):
                 try:
                     expected_vb = None
-                    signal_type = ""
 
                     # CRUZA O DO_NAME COM A POSIÇÃO CORRETA:
                     if do_name == "Ind07":                      # MESTRE (VB 1 a 4)
@@ -161,7 +156,7 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
                             message="Sinal não reconhecido",
-                            device=ied.name,
+                            device=target,
                             found=do_name
                         ))
                         continue        
@@ -174,9 +169,7 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
                             message=f"Sinal '{obj_ref}' do trafo {target} está na posição errada",
-                            publisher=target,
-                            subscriber=ied.name,
-                            affected_signal=obj_ref,
+                            device=target,
                             expected=expected_vb_str,
                             found=vb_upper
                         )) 
@@ -184,8 +177,8 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                 except ValueError:
                     vb_errors.append(ErrorDetail(
                         category=ErrorCategory.LOGIC, 
-                        message="VB com formato inválido", 
-                        device=ied.name, 
+                        message="VB com formato inválido",
+                        device=target,
                         found=vb
                         ))
 
@@ -199,9 +192,7 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
                             message=f"posição do Tap de {target} deveria estar no slot fixo",
-                            publisher=target,
-                            subscriber=ied.name,
-                            affected_signal=obj_ref,
+                            device=target,
                             expected=f"RA{expected_ra:02d}",
                             found=vb_upper
                         ))
@@ -209,15 +200,15 @@ def validate_parallelism_vbs(topology: TopologyResponse) -> list[ErrorDetail]:
                     vb_errors.append(ErrorDetail(
                         category=ErrorCategory.LOGIC, 
                         message="RA com formato inválido", 
-                        device=ied.name, 
+                        device=target,
                         found=vb
                         ))
                     
             else:
                 vb_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
-                    message="Esperado VB ou RA como tipo de IntAddr", 
-                    device=ied.name, 
+                    message="Esperado VB ou RA como tipo de IntAddr",
+                    device=target,
                     found=vb
                 ))
 
@@ -230,16 +221,16 @@ def validate_parallelism_vars(topology: TopologyResponse) -> list[ErrorDetail]:
 
     for subscriber in topology.ieds:
         for ext_ref in subscriber.inputs:
-            target_name = ext_ref.listens_to
+            target = ext_ref.listens_to
             do_name = ext_ref.do_name
             da_name = ext_ref.da_name
             obj_ref = ext_ref.object_ref
 
-            if not target_name or not do_name:
+            if not target or not do_name:
                 continue
 
             # DEFINE O IED PUBLISHER
-            publisher = ied_dict.get(target_name)
+            publisher = ied_dict.get(target)
             
             if not publisher:
                 continue
@@ -255,11 +246,9 @@ def validate_parallelism_vars(topology: TopologyResponse) -> list[ErrorDetail]:
                 publish_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
                     message=f"Sinal esperado do IED {subscriber.name} não encontrado no dataset",
-                    publisher=publisher.name,
-                    subscriber=subscriber.name,
-                    affected_signal=obj_ref,
+                    device=target,
                     expected=obj_ref,
-                    found=f"Sinal ausente no {target_name}"
+                    found=f"Sinal ausente no {target}"
                 ))
 
     return publish_errors

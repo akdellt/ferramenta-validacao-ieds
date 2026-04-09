@@ -1,9 +1,5 @@
 import lxml.etree
-from app.schemas.topology import (
-    DataSetSchema, FcdaSchema, TopologyType, TopologyResponse,
-    IedCommunicationSchema, ExtRefSchema, IedSchema, ConnectionEdge,
-    IedSummary, ErrorDetail
-)
+from app.schemas.topology import *
 from app.exceptions import InvalidFileContentError, FileTooLargeError
 
 MAX_SCD_SIZE_BYTES: int = 50 * 1024 * 1024
@@ -86,6 +82,7 @@ def read_scd_file(content: bytes, filename: str) -> TopologyResponse:
             comm_block = tree.xpath(f'//scl:ConnectedAP[@iedName="{name}"]', namespaces=SCL_NS)
 
             mac = app_id = vlan = min_time = max_time = None
+            
             # BUSCA DADOS DE COMUNICAÇÃO DO IED
             if comm_block:
                 cb = comm_block[0]
@@ -175,7 +172,7 @@ def build_connection_map(ieds: list[IedSchema], logic_errors: list[ErrorDetail] 
     for (src, dst), signals in connections.items():
         link_errors = [
             e for e in logic_errors 
-            if e.publisher == src and e.subscriber == dst
+            if e.publisher == src and e.subscriber == dst and e.category == ErrorCategory.LOGIC
         ]
 
         map_list.append(ConnectionEdge(
@@ -191,10 +188,15 @@ def build_connection_map(ieds: list[IedSchema], logic_errors: list[ErrorDetail] 
 # RESULTADO FINAL DE VALIDAÇÃO
 def build_ied_summary(ieds: list[IedSchema], all_errors: list[ErrorDetail]) -> list[IedSummary]:
     summary_list = []
+    device_categories = [ErrorCategory.CONSISTENCY, ErrorCategory.COMMUNICATION]
+
     for ied in ieds:
         specific_errors = [
             e for e in all_errors 
-            if e.device == ied.name or e.subscriber == ied.name or e.publisher == ied.name
+            if e.device == ied.name and (
+                e.category in device_categories or 
+                (e.category == ErrorCategory.LOGIC and not e.subscriber and not e.publisher)
+            )
         ]
 
         summary_list.append(IedSummary(

@@ -23,7 +23,6 @@ Crie um arquivo `.env` na pasta raiz do projeto com base no `.env.example` e sub
 ```env
 POSTGRES_PASSWORD=sua_senha_aqui
 DATABASE_URL=postgresql://admin:sua_senha_aqui@db:5432/equatorial_db
-MASTER_USER_PASSWORD=crie_senha_aqui
 ```
 
 ### Com Docker (recomendado)
@@ -49,11 +48,13 @@ Para liberar a busca de dados via FTP/Telnet de forma simulada, siga esses passo
 
 ## Dados de Teste
 
-Para popular o banco com IEDs de exemplo e ter dados para testar o módulo de rede:
+Para popular o banco com IEDs de exemplo e ter dados para testar o módulo de rede, você deve preencher um arquivo excel (.xlsx) seguindo o modelo abaixo e inserir pelo botão "Importar Inventário de IEDs" no menu lateral da interface.
 
-```bash
-docker exec -it fast_backend python scripts/seed_ieds.py
-```
+Exemplo da planilha: **[Modelo de Inventário](./samples/modelo_bd.xlsx)**
+| Nome | Subestação | Componente | Modelo | IP | Tipo |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Identificador único | Sigla da subestação | Nome específico | Modelo do IED | IP na subestação | TELNET/FTP (opcional) |
+| `CPL_02T2` | `CLP` | `02T2` | `SEL 2414` | `10.9.24.110` | `TELNET` |
 
 ## Acessos rápidos
 
@@ -91,6 +92,7 @@ docker exec -it fast_backend python scripts/seed_ieds.py
 ├── backend/
 ├── frontend/
 ├── mocks/
+├── samples/
 ├── docker-compose.yml
 └── .env.example
 ```
@@ -105,14 +107,10 @@ docker exec -it fast_backend python scripts/seed_ieds.py
 [x] Sistema de autenticação e gestão de históricos  
 [x] Refatoração do código  
 [x] Tela de formulário de subestação  
-[x] Visualização gráfica dos erros de validação
+[x] Visualização gráfica dos erros de validação  
+[X] Importação de dados de IEDs para busca em rede via interface
 
 ### Em desenvolvimento
 
-[ ] Módulo de rede FTP/Telnet (testes em ambiente real)  
-[ ] Implementação de testes
-
-### A implementar
-
-[ ] Formulário de referência dinâmico (usuário constrói circuito)  
-[ ] Responsividade das telas
+[x] Módulo de rede FTP/Telnet (testes em ambiente real)  
+[X] Implementação de testes

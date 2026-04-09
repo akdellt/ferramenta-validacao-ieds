@@ -8,7 +8,6 @@ class ValidationLogBase(BaseModel):
     filename_oa: str
     filename_ied: str
     status: str
-    user_registration: str | None = None
     result_json: list[dict[str, object]] 
 
 # SCHEMA DE CRIAÇÃO DE HISTÓRICO
@@ -20,9 +19,3 @@ class ValidationLogResponse(ValidationLogBase):
     id: int
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
-
-
-# INFORMAÇÕES DE LOGIN
-class UserLogin(BaseModel):
-    registration: str
-    password: str

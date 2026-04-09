@@ -6,7 +6,7 @@ class TopologyType(str, Enum):
     PARALLELISM = "Paralelismo"
     LOGICAL_SELECTIVITY_COUPLED = "Seletividade Lógica com Barra Comum"
     LOGICAL_SELECTIVITY_ISOLATED = "Seletividade Lógica Independente"
-    GENERIC = "Cenário Não Identificado"
+    GENERIC = "Genérico"
 
 # POSSÍVEIS CATEGORIAS DE ERRO
 class ErrorCategory(str, Enum):
@@ -83,13 +83,11 @@ class TopologyResponse(BaseModel):
 
 # SCHEMA DE ERRO
 class ErrorDetail(BaseModel):
-    category: ErrorCategory               
+    category: ErrorCategory
     message: str
-    device: str | None = None  
-    related_to: str | None = None            
-    publisher: str | None = None    
-    subscriber: str | None = None   
-    affected_signal: str | None = None
+    device: str | None = None
+    publisher: str | None = None
+    subscriber: str | None = None
     expected: str | None = None
     found: str | None = None
 

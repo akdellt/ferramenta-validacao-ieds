@@ -15,7 +15,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "flex items-center justify-center gap-2 rounded-lg text-sm font-bold tracking-wider shadow-lg transition-all outline-none disabled:cursor-not-allowed disabled:opacity-70";
+    "flex items-center justify-center gap-2 rounded-lg cursor-pointer text-sm font-bold tracking-wider shadow-lg transition-all outline-none disabled:cursor-not-allowed disabled:opacity-70";
 
   const variants = {
     primary:

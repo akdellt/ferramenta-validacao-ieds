@@ -1,59 +1,79 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useValidation } from "../context/ValidationContext";
 import { CircuitDiagram } from "../features/topology/components/CircuitDiagram";
 import { CircuitErrorModal } from "../features/topology/components/CircuitErrorModal";
-import { useValidation } from "../context/ValidationContext";
-import type { IedSummary, ConnectionEdge } from "../features/topology/types";
+import type { ErrorDetail } from "../features/topology/types";
 
 const CircuitsPage = () => {
   const { topologyReport } = useValidation();
-  const [selectedIed, setSelectedIed] = useState<IedSummary | null>(null);
+  const [modalData, setModalData] = useState<{
+    name: string;
+    errors: ErrorDetail[];
+  } | null>(null);
+  const navigate = useNavigate();
 
   const transformersFromSCD = useMemo(() => {
     if (!topologyReport || !topologyReport.ied_summary) return [];
 
-    return topologyReport.ied_summary
-      .filter((ied: IedSummary) => ied.name.toUpperCase().includes("T"))
-      .map((ied: IedSummary) => ({
-        id: ied.name,
-        name: ied.name,
-        relay_model: ied.relay_model,
+    const trafoNames = Array.from(
+      new Set(topologyReport.connection_map.map((edge) => edge.to_ied)),
+    );
 
-        feeders: (topologyReport.connection_map || [])
-          .filter((edge: ConnectionEdge) => edge.to_ied === ied.name)
-          .map((edge: ConnectionEdge) => ({
+    return trafoNames.map((name) => {
+      const iedInfo = topologyReport.ied_summary.find(
+        (ied) => ied.name === name,
+      );
+
+      return {
+        id: name,
+        name: name,
+        relay_model: iedInfo?.relay_model || "N/A",
+        feeders: topologyReport.connection_map
+          .filter((edge) => edge.to_ied === name)
+          .map((edge) => ({
             id: edge.from_ied,
             name: edge.from_ied,
           })),
-      }));
+      };
+    });
   }, [topologyReport]);
 
-  const activeErrors = useMemo(
-    () =>
-      topologyReport?.ied_summary
-        .filter((ied) => !ied.is_healthy)
-        .map((ied) => ied.name) || [],
-    [topologyReport],
-  );
+  const handleComponentClick = (id: string) => {
+    if (!topologyReport) return;
 
-  const handleComponentClick = (name: string) => {
-    const iedInfo = topologyReport?.ied_summary.find(
-      (ied) => ied.name === name,
-    );
+    if (id.startsWith("conn:")) {
+      const iedName = id.replace("conn:", "");
+      const connection = topologyReport.connection_map.find(
+        (c) => c.from_ied === iedName || c.to_ied === iedName,
+      );
 
-    if (iedInfo && !iedInfo.is_healthy) {
-      setSelectedIed(iedInfo);
+      if (connection && connection.is_broken) {
+        setModalData({
+          name: connection.from_ied,
+          errors: connection.errors || [],
+        });
+      }
+    } else {
+      const iedInfo = topologyReport.ied_summary.find((ied) => ied.name === id);
+
+      if (iedInfo && !iedInfo.is_healthy) {
+        setModalData({
+          name: iedInfo.name,
+          errors: iedInfo.errors || [],
+        });
+      }
     }
   };
 
-  if (!topologyReport) {
-    return (
-      <div className="py-20 text-center">
-        <p className="text-sm text-gray-500">
-          Aguardando resultados da validação...
-        </p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!topologyReport) {
+      navigate("/topologies");
+    }
+  }, [topologyReport, navigate]);
+
+  if (!topologyReport) return null;
 
   return (
     <div className="mx-auto w-full max-w-400 px-8 py-12">
@@ -64,17 +84,18 @@ const CircuitsPage = () => {
       <main className="diagram-canvas min-h-[600px] w-full overflow-auto rounded-xl border-2 border-dashed border-gray-200 shadow-inner">
         <CircuitDiagram
           transformers={transformersFromSCD}
-          errors={activeErrors}
+          iedSummary={topologyReport.ied_summary}
+          connectionMap={topologyReport.connection_map}
           onComponentClick={handleComponentClick}
           topologyType={topologyReport.scenario}
         />
       </main>
 
       <CircuitErrorModal
-        isOpen={!!selectedIed}
-        onClose={() => setSelectedIed(null)}
-        IedName={selectedIed?.name || ""}
-        errors={selectedIed?.errors || []}
+        isOpen={!!modalData}
+        onClose={() => setModalData(null)}
+        IedName={modalData?.name || ""}
+        errors={modalData?.errors || []}
       />
     </div>
   );

@@ -49,7 +49,7 @@ export const TransformerBay = ({
         className={hoverClass}
       />
       <line
-        x1={x + 110}
+        x1={x + 111}
         y1={y}
         x2={x + 160}
         y2={y}
@@ -90,7 +90,7 @@ export const TransformerBay = ({
       </g>
 
       <line
-        x1={x + 225}
+        x1={x + 226}
         y1={y}
         x2={x + 280}
         y2={y}
@@ -108,7 +108,7 @@ export const TransformerBay = ({
       />
 
       <line
-        x1={x + 310}
+        x1={x + 311}
         y1={y}
         x2={x + 360}
         y2={y}

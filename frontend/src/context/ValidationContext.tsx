@@ -5,13 +5,14 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
+
 import type { IedSlotData } from "../types/parameters";
 import type {
   TopologyValidationResponse,
   Transformer,
 } from "../features/topology/types";
 import type { BackendReport } from "../features/result/types";
-import { useNavigate } from "react-router-dom";
 
 interface ValidationContextData {
   oaFiles: File[];
@@ -66,8 +67,12 @@ export function ValidationProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setTransformers([]);
-  }, [topologyType, setTransformers]);
+    if (topologyType) {
+      setTransformers([]);
+      setScdFile(null);
+      setTopologyReport(null);
+    }
+  }, [topologyType]);
 
   const clearSession = () => {
     setOaFiles([]);

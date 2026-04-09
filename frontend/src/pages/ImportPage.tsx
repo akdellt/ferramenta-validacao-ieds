@@ -1,11 +1,12 @@
 import { useImportActions } from "../features/import/hooks/useImportActions";
-import { ErrorBanner } from "../components/common/ErrorBanner";
 import ImportSection from "../features/import/components/ImportSection";
+import { ErrorBanner } from "../components/common/ErrorBanner";
 import { Button } from "../components/common/Button";
 
 function ImportPage() {
   const {
     loading,
+    isVerifying,
     apiError,
     setApiError,
     oaFiles,
@@ -51,8 +52,8 @@ function ImportPage() {
         <div className="mt-10 flex justify-end">
           <Button
             onClick={handleVerify}
-            isLoading={loading}
-            disabled={!iedSlots.some((s) => s.file)}
+            isLoading={isVerifying}
+            disabled={isVerifying || loading || !iedSlots.some((s) => s.file)}
           >
             VERIFICAR
           </Button>

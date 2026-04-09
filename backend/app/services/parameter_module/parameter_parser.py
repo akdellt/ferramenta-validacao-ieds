@@ -9,7 +9,6 @@ from app.exceptions import (
     EmptyFileError,
     InvalidFileFormatError,
     InvalidFileContentError,
-    IEDNotIdentifiedError,
     FileProcessingError,
     FileTooLargeError
 )
@@ -56,7 +55,6 @@ def format_relay_name(name: str | None) -> str:
 
     return " ".join(words[:2])
 
-
 def metadata_row(param_value: str | None, row_text: str) -> bool:
     if param_value:
         param_upper = param_value.upper()
@@ -99,14 +97,12 @@ def parse_oa_parameters(ws: Worksheet, filename: str) -> list[ReferenceParameter
             details="Não localizadas as colunas obrigatórias 'PARAMETRO' e 'AJUSTE SUGERIDO'."
         )
     
-
     if data_start_row > 0:
         prev_row = all_rows[data_start_row - 1]
         for cell in prev_row:
             if cell and str(cell).strip():
                 current_group = str(cell).strip()
                 break
-
 
     for i in range(data_start_row + 1, len(all_rows)):
         row = all_rows[i]
@@ -206,8 +202,6 @@ def parse_oa_file(content: bytes, filename: str) -> OAFilesData:
             raise e
         raise FileProcessingError(filename=filename, details=str(e))
 
-
-
 # EXTRAÇÃO DOS PARÂMETROS DA IED
 def parse_ied_parameters(text: str) -> list[CurrentParameter]:
     param_list = []
@@ -239,7 +233,7 @@ def parse_ied_file(content: bytes, filename: str) -> IEDFilesData:
     except UnicodeDecodeError:
         text = content.decode("latin-1", errors="ignore")
     
-    relay_match = re.search(r"(?:FID|RELAYTYPE)\s*[:=,]\s*([^\s,\r\n]+)", text, re.I)
+    relay_match = re.search(r"FID\s*[:=,]\s*\"?([^\s,\r\n\"]+)\"?", text, re.I)
     
     if not relay_match:
         relay_model = "MODELO DESCONHECIDO"

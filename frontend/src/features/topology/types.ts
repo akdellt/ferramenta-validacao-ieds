@@ -2,7 +2,7 @@ export const TOPOLOGY_MAP = {
   PARALLELISM: "Paralelismo",
   LOGICAL_SELECTIVITY_COUPLED: "Seletividade Lógica com Barra Comum",
   LOGICAL_SELECTIVITY_ISOLATED: "Seletividade Lógica Independente",
-  GENERIC: "Cenário Não Identificado",
+  GENERIC: "Genérico",
 } as const;
 
 export type TopologyType = (typeof TOPOLOGY_MAP)[keyof typeof TOPOLOGY_MAP];
@@ -12,6 +12,7 @@ export const getTopologyHelpers = (type: string | null) => {
     isParallel: type === TOPOLOGY_MAP.PARALLELISM,
     isCommonBus: type === TOPOLOGY_MAP.LOGICAL_SELECTIVITY_COUPLED,
     isIndependent: type === TOPOLOGY_MAP.LOGICAL_SELECTIVITY_ISOLATED,
+    isGeneric: type === TOPOLOGY_MAP.GENERIC,
     showFeederList: type !== TOPOLOGY_MAP.PARALLELISM,
   };
 };
@@ -22,10 +23,8 @@ export interface ErrorDetail {
   category: ErrorCategory;
   message: string;
   device?: string;
-  related_to?: string;
   publisher?: string;
   subscriber?: string;
-  affected_signal?: string;
   expected?: string;
   found?: string;
 }

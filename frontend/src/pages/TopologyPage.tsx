@@ -1,20 +1,20 @@
 import { Plus } from "lucide-react";
 
-import { useValidation } from "../context/ValidationContext";
-import { ErrorBanner } from "../components/common/ErrorBanner";
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { FILE_CONFIG } from "../config/fileUpload";
+import { useValidation } from "../context/ValidationContext";
+
 import { useTopologySubmission } from "../features/topology/hooks/useTopologySubmission";
+import useTopologyActions from "../features/topology/hooks/useTopologyActions";
 import { TransformerCard } from "../features/topology/components/TransformerCard";
 import { TopologyTypeSelector } from "../features/topology/components/TopologyTypeSelector";
+import { CircuitErrorModal } from "../features/topology/components/CircuitErrorModal";
+import { getTopologyHelpers } from "../features/topology/types";
 import DropzoneArea from "../components/common/DropzoneArea";
-import { FILE_CONFIG } from "../config/fileUpload";
-import useTopologyActions from "../features/topology/hooks/useTopologyActions";
 import Card from "../components/common/Card";
 import { Button } from "../components/common/Button";
-import { getTopologyHelpers } from "../features/topology/types";
-import { CircuitErrorModal } from "../features/topology/components/CircuitErrorModal";
+import { ErrorBanner } from "../components/common/ErrorBanner";
 
 function TopologyPage() {
   const {
@@ -45,7 +45,8 @@ function TopologyPage() {
 
   const navigate = useNavigate();
 
-  const { isCommonBus, isParallel } = getTopologyHelpers(topologyType);
+  const { isCommonBus, isParallel, isGeneric } =
+    getTopologyHelpers(topologyType);
 
   const transformerNames = transformers.map((t) => t.name.trim().toUpperCase());
   const duplicateTrafos = transformerNames.filter(
@@ -72,11 +73,12 @@ function TopologyPage() {
   const isFormInvalid =
     !topologyType ||
     !scdFile ||
-    (isCommonBus && transformers.length < 2) ||
-    (isParallel && transformers.length < 2) ||
-    transformers.some((t) => t.name.trim() === "") ||
-    duplicateTrafos.length > 0 ||
-    duplicateFeederNames.length > 0;
+    (!isGeneric &&
+      ((isCommonBus && transformers.length < 2) ||
+        (isParallel && transformers.length < 2) ||
+        transformers.some((t) => t.name.trim() === "") ||
+        duplicateTrafos.length > 0 ||
+        duplicateFeederNames.length > 0));
 
   const handleCloseModal = () => {
     setIsErrorModalOpen(false);

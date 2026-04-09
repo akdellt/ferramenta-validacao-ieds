@@ -11,25 +11,21 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<BackendError>) => {
-    if (error.response && error.response.data) {
+    if (error.response?.status === 504 || error.code === "ECONNABORTED") {
+      return Promise.reject({
+        message: "O IED demorou muito para responder (Timeout de Rede).",
+        error: "Timeout",
+        isAxiosError: true,
+      });
+    }
+
+    if (error.response?.data) {
       const data = error.response.data as any;
-
-      const errorTitle = data.error || "Erro";
-      const errorMessage = data.detail || "Falha na operação";
-
-      console.error(
-        `[API ${error.response.status}]: ${errorTitle} - ${errorMessage}`,
-      );
-
-      // remover depois
-      if (data.detail) {
-        console.debug("Detalhes da falha:", data.detail);
-      }
 
       return Promise.reject({
         response: error.response,
-        message: errorMessage,
-        error: errorTitle,
+        message: data.detail || "Falha na operação",
+        error: data.error || "Erro",
         isAxiosError: true,
       });
     }
@@ -47,7 +43,20 @@ export const iedService = {
 
 export const networkService = {
   fetchIedData: async (iedName: string) => {
-    const response = await api.get(`/relays/search-network/${iedName}`);
+    const response = await api.get(`/relays/search-network/${iedName}`, {
+      timeout: 90000,
+    });
+    return response.data;
+  },
+};
+
+export const inventoryService = {
+  importExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post("/inventory/import", formData);
+
     return response.data;
   },
 };

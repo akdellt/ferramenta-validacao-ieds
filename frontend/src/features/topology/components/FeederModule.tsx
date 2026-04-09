@@ -6,6 +6,8 @@ interface FeederModuleProps {
   spacing: number;
   isLast?: boolean;
   onClick: () => void;
+  isLineError?: boolean;
+  onLineClick?: () => void;
 }
 
 export const FeederModule = ({
@@ -15,22 +17,18 @@ export const FeederModule = ({
   isError,
   spacing,
   onClick,
+  isLineError,
+  onLineClick,
 }: FeederModuleProps) => {
-  const color = isError ? "var(--color-error)" : "var(--color-eq-primary)";
+  const iedColor = isError ? "var(--color-error)" : "var(--color-eq-primary)";
+  const lineColor = isLineError
+    ? "var(--color-error)"
+    : "var(--color-eq-primary)";
 
   const baseStrokeWidth = "3";
 
-  const hoverClass = isError
-    ? "cursor-pointer group-hover:stroke-[4px] transition-all duration-200"
-    : "pointer-events-none";
-
   return (
-    <g
-      onClick={isError ? onClick : undefined}
-      style={{ cursor: isError ? "pointer" : "default" }}
-      className={isError ? "group" : ""}
-      strokeWidth={baseStrokeWidth}
-    >
+    <g strokeWidth={baseStrokeWidth}>
       <line
         x1={x}
         y1={y - spacing / 2}
@@ -40,14 +38,33 @@ export const FeederModule = ({
         strokeWidth="4"
       />
 
-      <line
-        x1={x}
-        y1={y}
-        x2={x + 60}
-        y2={y}
-        stroke="var(--color-eq-primary)"
-        className={hoverClass}
-      />
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isLineError && onLineClick) onLineClick();
+        }}
+        className={
+          isLineError ? "group/line cursor-pointer" : "pointer-events-none"
+        }
+      >
+        <line
+          x1={x + 2}
+          y1={y}
+          x2={x + 60}
+          y2={y}
+          stroke="transparent"
+          strokeWidth="20"
+        />
+
+        <line
+          x1={x + 2}
+          y1={y}
+          x2={x + 60}
+          y2={y}
+          stroke={lineColor}
+          className={`${isLineError ? "cursor-pointer transition-all duration-200 group-hover/line:stroke-[4px]" : ""}`}
+        />
+      </g>
 
       <rect
         x={x + 60}
@@ -55,14 +72,11 @@ export const FeederModule = ({
         width="30"
         height="30"
         fill="white"
-        stroke={color}
-        className={hoverClass}
+        stroke={iedColor}
+        className={`${isError ? "cursor-pointer transition-all duration-200 hover:stroke-[4px]" : "pointer-events-none"}`}
         onClick={(e) => {
-          if (!isError) {
-            e.preventDefault();
-            return;
-          }
-          onClick();
+          e.stopPropagation();
+          if (isError) onClick();
         }}
       />
 
