@@ -112,7 +112,7 @@ async def fetch_ied_from_network(ied_name: str, db: Session = Depends(get_db)):
     try:
         raw_content, remote_filename = await search_ied(ied)
     except IEDTimeoutError as e:
-        raise HTTPException(status_code=408, detail=str(e))
+        raise HTTPException(status_code=504, detail=str(e))
     except IEDAuthError as e:
         raise HTTPException(status_code=401, detail=str(e))
     except IEDConnectionError as e:

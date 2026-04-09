@@ -6,7 +6,7 @@ Interface para upload de arquivos, topologia, análise de resultados e visualiza
 
 - **React + Vite**
 - **TailwindCSS** (estilização)
-- **Lucide React** (écones)
+- **Lucide React** (ícones)
 - **Axios** (comunicação com API)
 
 ## Estrutura
@@ -17,7 +17,7 @@ frontend/
 │   ├── assets/       # Logo da empresa
 │   ├── components/   # Componentes reutilizáveis
 │   ├── config/       # Configuração de tipos e restrições de arquivos
-│   ├── context/      # Contextos do React (autenticação, validação)
+│   ├── context/      # Contextos do React (sessão, validação)
 │   ├── features/     # Componentes específicos das features
 │   ├── hooks/        # Hooks de sidebar e tela de import
 │   ├── pages/        # Páginas principais da aplicação

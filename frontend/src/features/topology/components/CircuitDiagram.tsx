@@ -8,14 +8,16 @@ import {
 
 interface CircuitDiagramProps {
   transformers: Transformer[];
-  errors: string[];
+  iedSummary: any[];
+  connectionMap: any[];
   topologyType: TopologyType;
   onComponentClick: (name: string) => void;
 }
 
 export const CircuitDiagram = ({
   transformers,
-  errors,
+  iedSummary,
+  connectionMap,
   topologyType,
   onComponentClick,
 }: CircuitDiagramProps) => {
@@ -24,13 +26,13 @@ export const CircuitDiagram = ({
 
   const feederSpacing = 70;
   const xAnchor = 40;
-  const xBusSecundario = 400;
+  const xBusSecondary = 400;
   const feederWidth = 200;
 
   const dynamicWidth =
     isIndependent || isCommonBus
-      ? xBusSecundario + feederWidth + 40
-      : xBusSecundario + 60;
+      ? xBusSecondary + feederWidth + 40
+      : xBusSecondary + 60;
 
   const bayGap = isIndependent ? 15 : 0;
 
@@ -76,9 +78,9 @@ export const CircuitDiagram = ({
 
       {isParallel && (
         <line
-          x1={xBusSecundario}
+          x1={xBusSecondary}
           y1={50}
-          x2={xBusSecundario}
+          x2={xBusSecondary}
           y2={totalHeight - 50}
           stroke="var(--color-eq-primary)"
           strokeWidth="4"
@@ -86,6 +88,9 @@ export const CircuitDiagram = ({
       )}
 
       {transformers.map((tr) => {
+        const iedStatus = iedSummary.find((s) => s.name === tr.name);
+        const isIedError = iedStatus ? !iedStatus.is_healthy : false;
+
         const feedersHeight = tr.feeders.length * feederSpacing;
         let bayHeight = isIndependent ? Math.max(120, feedersHeight) : 150;
 
@@ -103,15 +108,15 @@ export const CircuitDiagram = ({
               y={yCenter}
               name={tr.name}
               relayModel={tr.relay_model}
-              isError={errors.includes(tr.name)}
+              isError={isIedError}
               onClick={() => onComponentClick(tr.name)}
             />
 
-            {isParallel && (
+            {(isParallel || isCommonBus) && (
               <line
                 x1={xAnchor + 310}
                 y1={yCenter}
-                x2={xBusSecundario}
+                x2={xBusSecondary}
                 y2={yCenter}
                 stroke="var(--color-eq-primary)"
                 strokeWidth="2"
@@ -120,18 +125,31 @@ export const CircuitDiagram = ({
 
             {isIndependent &&
               tr.feeders.map((feeder, fIdx) => {
+                const feederStatus = iedSummary.find(
+                  (s) => s.name === feeder.name,
+                );
+                const isFeederError = feederStatus
+                  ? !feederStatus.is_healthy
+                  : false;
+
+                const conn = connectionMap.find(
+                  (c) => c.from_ied === feeder.name && c.to_ied === tr.name,
+                );
+
                 const yFeeder =
                   startY + fIdx * feederSpacing + feederSpacing / 2;
 
                 return (
                   <FeederModule
                     key={feeder.id}
-                    x={xBusSecundario}
+                    x={xBusSecondary}
                     y={yFeeder}
                     spacing={feederSpacing}
                     name={feeder.name}
-                    isError={errors.includes(feeder.name)}
+                    isError={isFeederError}
                     isLast={false}
+                    isLineError={conn?.is_broken || false}
+                    onLineClick={() => onComponentClick(`conn:${feeder.name}`)}
                     onClick={() => onComponentClick(feeder.name)}
                   />
                 );
@@ -141,18 +159,27 @@ export const CircuitDiagram = ({
       })}
 
       {isCommonBus &&
-        uniqueFeeders.map((feeder, fIdx) => (
-          <FeederModule
-            key={feeder.id}
-            x={xBusSecundario}
-            y={50 + fIdx * feederSpacing + feederSpacing / 2}
-            spacing={feederSpacing}
-            name={feeder.name}
-            isError={errors.includes(feeder.name)}
-            isLast={fIdx === uniqueFeeders.length - 1}
-            onClick={() => onComponentClick(feeder.name)}
-          />
-        ))}
+        uniqueFeeders.map((feeder, fIdx) => {
+          const feederStatus = iedSummary.find((s) => s.name === feeder.name);
+          const isFeederError = feederStatus ? !feederStatus.is_healthy : false;
+
+          const conn = connectionMap.find((c) => c.from_ied === feeder.name);
+
+          return (
+            <FeederModule
+              key={feeder.id}
+              x={xBusSecondary}
+              y={50 + fIdx * feederSpacing + feederSpacing / 2}
+              spacing={feederSpacing}
+              name={feeder.name}
+              isError={isFeederError}
+              isLast={fIdx === uniqueFeeders.length - 1}
+              isLineError={conn?.is_broken || false}
+              onLineClick={() => onComponentClick(`conn:${feeder.name}`)}
+              onClick={() => onComponentClick(feeder.name)}
+            />
+          );
+        })}
     </svg>
   );
 };

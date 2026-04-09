@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useValidation } from "../context/ValidationContext";
+
 import { api } from "../services/api";
-import LogTable, { type HistoryLog } from "../features/log/LogTable";
-import { ErrorBanner } from "../components/common/ErrorBanner";
+import { useValidation } from "../context/ValidationContext";
 import { type BackendError } from "../types/error";
 import { type BackendReport } from "../features/result/types";
+import LogTable, { type HistoryLog } from "../features/log/LogTable";
+import { ErrorBanner } from "../components/common/ErrorBanner";
 
 function LogPage() {
   const navigate = useNavigate();

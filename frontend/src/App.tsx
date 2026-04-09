@@ -1,35 +1,15 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 
-import { useAuth } from "./context/AuthContext";
 import ImportPage from "./pages/ImportPage";
 import ResultPage from "./pages/ResultPage";
-import LoginPage from "./pages/LoginPage";
-import LogPage from "./pages/LogPage";
 import TopologyPage from "./pages/TopologyPage";
 import CircuitsPage from "./pages/CircuitsPage";
+import LogPage from "./pages/LogPage";
 
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 
-const ProtectedRoute = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="bg-background flex h-screen items-center justify-center">
-        <div className="border-eq-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Outlet />;
-};
-
-const PrivateLayout = () => {
+const MainLayout = () => {
   return (
     <div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
       <div className="shrink-0">
@@ -49,19 +29,15 @@ const PrivateLayout = () => {
 function App() {
   return (
     <Routes>
-      <Route path="login" element={<LoginPage />} />
-
-      <Route element={<ProtectedRoute />}>
-        <Route element={<PrivateLayout />}>
-          <Route index element={<ImportPage />} />
-          <Route path="results" element={<ResultPage />} />
-          <Route path="logs" element={<LogPage />} />
-          <Route path="topologies" element={<TopologyPage />} />
-          <Route path="circuits" element={<CircuitsPage />} />
-        </Route>
+      <Route element={<MainLayout />}>
+        <Route index element={<ImportPage />} />
+        <Route path="results" element={<ResultPage />} />
+        <Route path="logs" element={<LogPage />} />
+        <Route path="topologies" element={<TopologyPage />} />
+        <Route path="circuits" element={<CircuitsPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

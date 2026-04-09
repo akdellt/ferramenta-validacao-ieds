@@ -34,9 +34,9 @@ def validate_logical_selectivity_vbs(topology: TopologyResponse) -> list[ErrorDe
                 vb_errors.append(ErrorDetail(
                     category=ErrorCategory.LOGIC,
                     message=f"{ied.name} tenta ouvir {target} sem mapeamento de Virtual Bit",
+                    device=target,
                     publisher=target,
-                    subscriber=ied.name,
-                    affected_signal=obj_ref
+                    subscriber=ied.name
                 ))
                 continue
 
@@ -46,7 +46,6 @@ def validate_logical_selectivity_vbs(topology: TopologyResponse) -> list[ErrorDe
                     category=ErrorCategory.LOGIC,
                     message=f"Múltiplos sinais apontando para {vb}",
                     device=ied.name,
-                    affected_signal=obj_ref,
                     expected="VB Única",
                     found=vb
                 ))
@@ -91,10 +90,10 @@ def validate_logical_selectivity_vbs(topology: TopologyResponse) -> list[ErrorDe
                     if num != expected_vb:
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
-                            message=f"Sinal '{obj_ref}' do trafo {target} está na posição errada",
+                            message=f"Sinal '{obj_ref}' do IED {target} está na posição errada",
+                            device=target,
                             publisher=target,
                             subscriber=ied.name,
-                            affected_signal=obj_ref,
                             expected=expected_vb_str,
                             found=vb_upper
                         )) 
@@ -104,37 +103,37 @@ def validate_logical_selectivity_vbs(topology: TopologyResponse) -> list[ErrorDe
                         vb_errors.append(ErrorDetail(
                             category=ErrorCategory.LOGIC,
                             message=f"{vb} faz parte do espaço reservado (vazio) do bloco",
-                            device=ied.name,
-                            found=vb,
-                            expected="Espaço Vazio"
+                            device=target,
+                            expected="Espaço Vazio",
+                            found=vb
                         ))
                     
                 except ValueError:
                     vb_errors.append(ErrorDetail(
                         category=ErrorCategory.LOGIC,
                         message="VB com formato inválido",
-                        device=ied.name,
+                        device=target,
                         found=vb,
                     ))
 
     return vb_errors
 
 # VALIDAÇÃO DE PUBLISHER -> SUBSCRIBER
-def validate_selectivity_directionality(topology: TopologyResponse) -> list[ErrorDetail]:
+def validate_selectivity_directionality(topology: TopologyResponse, feeder_names: list[str], trafo_names: list[str]) -> list[ErrorDetail]:
     direction_errors = []
 
     for ied in topology.ieds:
-        current_name = ied.name.upper()
-        if "T" in current_name:
+        ied_name_up = ied.name.upper().strip()
+
+        if ied_name_up in feeder_names:
             for ext_ref in ied.inputs:
-                publisher_name = ext_ref.listens_to.upper() if ext_ref.listens_to else ""
-                if "Y" in publisher_name:
+                target = ext_ref.listens_to
+                if target and target.upper().strip() in trafo_names:
                     direction_errors.append(ErrorDetail(
                         category=ErrorCategory.LOGIC,
-                        message="Transformador não deve enviar mensagem para Alimentador",
-                        publisher=publisher_name,
-                        subscriber=ied.name,
-                        affected_signal=ext_ref.object_ref
+                        message=f"Transformador não deve enviar mensagem para Alimentador {target}",
+                        publisher=target,
+                        subscriber=ied.name
                     ))
 
     return direction_errors
@@ -160,7 +159,6 @@ def validate_selectivity_datasets(topology: TopologyResponse) -> list[ErrorDetai
                         message="IED publicador de sinal de controle não encontrado no projeto",
                         publisher=target_name,
                         subscriber=subscriber.name,
-                        affected_signal=obj_ref,
                         expected=target_name,
                         found="IED Ausente"
                     ))
@@ -189,10 +187,9 @@ def validate_selectivity_datasets(topology: TopologyResponse) -> list[ErrorDetai
                 dataset_errors.append(
                     ErrorDetail(
                         category=ErrorCategory.LOGIC,
-                        message=f"Sinal esperado do IED {subscriber.name} não encontrado no dataset",
+                        message=f"Sinal esperado pelo IED {subscriber.name} não encontrado no dataset",
                         publisher=publisher.name,
                         subscriber=subscriber.name,
-                        affected_signal=obj_ref,
                         expected=obj_ref,
                         found=f"Sinal ausente no {target_name}"
                     )
@@ -204,8 +201,11 @@ def validate_selectivity_datasets(topology: TopologyResponse) -> list[ErrorDetai
 def validate_logical_selectivity(topology: TopologyResponse, topology_scenario: TopologyType, form: ValidationForm) -> list[ErrorDetail]:
     all_selectivity_errors = []
 
+    trafo_names = [name.upper().strip() for name in form.expected_mapping.keys()]
+    feeder_names = [feeder.upper().strip() for feeders in form.expected_mapping.values() for feeder in feeders]
+
     # IED DO TRANSFORMADOR DEVE SER APENAS SUBSCRIBER E IEDS DE BORDA DEVEM SER PUBLISHERS
-    all_selectivity_errors.extend(validate_selectivity_directionality(topology))
+    all_selectivity_errors.extend(validate_selectivity_directionality(topology, feeder_names, trafo_names))
 
     # DADOS ENVIADOS DEVEM ESTAR CORRETOS
     all_selectivity_errors.extend(validate_selectivity_datasets(topology))
@@ -216,8 +216,8 @@ def validate_logical_selectivity(topology: TopologyResponse, topology_scenario: 
     # CASO ESPECÍFICO DE SLBF COM BARRA COMUM
     if topology_scenario == TopologyType.LOGICAL_SELECTIVITY_COUPLED:
         for trafo_name, expected_feeders in form.expected_mapping.items():
-            t_name_up = trafo_name.strip().upper()
-            trafo_ied = next((ied for ied in topology.ieds if ied.name.strip().upper() == t_name_up), None)
+            trafo_name_up = trafo_name.strip().upper()
+            trafo_ied = next((ied for ied in topology.ieds if ied.name.strip().upper() == trafo_name_up), None)
             if not trafo_ied: 
                 continue
             
@@ -228,7 +228,7 @@ def validate_logical_selectivity(topology: TopologyResponse, topology_scenario: 
                 if f_name_up not in actual_publishers:
                     all_selectivity_errors.append(ErrorDetail(
                         category=ErrorCategory.LOGIC,
-                        message=f"Alimentador deve estar conectado ao Transformador",
+                        message=f"Alimentador deve estar conectado ao Transformador {trafo_name}",
                         publisher=feeder,
                         subscriber=trafo_name,
                         expected="Conectado",

@@ -15,7 +15,7 @@ Responsável pelo processamento dos arquivos (OA, IEDs, SCDs) e validação de r
 ```
 backend/
 ├── app/
-│   ├── core/           # Configurações globais e de segurança
+│   ├── core/           # Configurações globais
 │   ├── routers/        # Rotas da API
 │   ├── schemas/        # Modelos de dados Pydantic
 │   ├── services/       # Lógica de negócio
