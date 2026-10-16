@@ -1,116 +1,77 @@
 # Ferramenta de Validação de Parâmetros de IEDs
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)  
 
-Sistema que valida automaticamente parâmetros de IEDs comparando Ordens de Ajuste
-com arquivos de configuração, e topologias de subestação via arquivos SCD,
-gerando relatórios e histórico por usuário.
+Sistema Full-Stack de **engenharia de dados e validação automatizada** desenvolvido para o setor de automação de subestações elétricas. A plataforma automatiza a auditoria de parâmetros de IEDs (*Intelligent Electronic Devices*), comparando Ordens de Ajuste (`.XLSX`) com arquivos de configuração (`.TXT`) e arquivos de topologia de subestação (`.SCD` / IEC 61850).
 
-## Tecnologias
+---
+> **Problema Resolvido:** A parametrização manual de IEDs em subestações é propensa a erros operacionais. Esta ferramenta reduz o tempo de comissionamento e auditagem ao identificar discrepâncias de parâmetros e topologia em segundos com relatórios visuais.
+---
 
-- **Backend:** Python, FastAPI, PostgreSQL
-- **Frontend:** React (Vite), TailwindCSS
+![Ferramenta de Validação em Ação](samples/demo.gif)
+> **[Assista à demonstração completa de 2 minutos no Google Drive](https://drive.google.com/file/d/1PSjpOgDIWlvmRX3a4evXXR2UbXrjw1yf/view?usp=sharing)**
+
+### Funcionalidades de Backend & Dados:
+- **Pipeline de Parsing Heterogêneo:** Ingestão e cruzamento de dados de arquivos não estruturados (`TXT`), planilhas (`XLSX`) e arquivos XML estruturados em padrão de subestação (`SCD`).
+- **Engine de Comparação de Parâmetros:** Algoritmo que varre chaves e valores esperados vs. configurados, gerando uma tabela detalhada de inconsistências.
+- **Validação de Topologia SCD:** Validação de esquemas e regras de negócio do arquivo da subestação frente ao formulário cadastrado pelo engenheiro.
+- **Módulo de Rede:** Integração via Telnet e FTP para automação de busca de dados TXT diretamente dos dispositivos de campo.
+- **Histórico & Auditoria:** Rastreabilidade de relatórios gerados via banco relacional.
+
+## Tecnologias Utilizadas
+
+- **Backend:** Python 3, FastAPI, Uvicorn, SQLAlchemy, Pydantic v2, OpenPyXL, PostgreSQL
+- **Frontend:** React, Vite, TailwindCSS
 - **Infraestrutura:** Docker, Docker Compose
 
-## Pré-requisitos
+### Pré-requisitos
+- [Docker](https://www.docker.com/) e Docker Compose instalados.
 
-- Docker instalado
-
-## Setup rápido
-
-Crie um arquivo `.env` na pasta raiz do projeto com base no `.env.example` e substitua as informações:
-
-> **Importante:** Certifique-se de que a senha em `POSTGRES_PASSWORD` seja a mesma usada na string `DATABASE_URL`.
+### 1. Configuração de Variáveis de Ambiente
+Crie o arquivo `.env` na raiz do projeto com base no arquivo `.env.example`:
 
 ```env
 POSTGRES_PASSWORD=sua_senha_aqui
 DATABASE_URL=postgresql://admin:sua_senha_aqui@db:5432/equatorial_db
 ```
 
-### Com Docker (recomendado)
+### 2. Inicialização via Docker (Recomendado)
 
 ```bash
 docker-compose up -d --build
 ```
 
-### Manualmente
-
-Veja as instruções em [backend/README.md](./backend/README.md)
-e [frontend/README.md](./frontend/README.md)
-
-### Teste de Rede (Simulação)
-
-Para liberar a busca de dados via FTP/Telnet de forma simulada, siga esses passos:
-
-1. Instale as dependências no ambiente virtual: `pip install pyftpdlib telnetlib3`
-2. Em um terminal separado, execute o simulador:
-   ```bash
-   python mocks/server_mock.py
-   ```
-
-## Dados de Teste
-
-Para popular o banco com IEDs de exemplo e ter dados para testar o módulo de rede, você deve preencher um arquivo excel (.xlsx) seguindo o modelo abaixo e inserir pelo botão "Importar Inventário de IEDs" no menu lateral da interface.
-
-Exemplo da planilha: **[Modelo de Inventário](./samples/modelo_bd.xlsx)**
-| Nome | Subestação | Componente | Modelo | IP | Tipo |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Identificador único | Sigla da subestação | Nome específico | Modelo do IED | IP na subestação | TELNET/FTP (opcional) |
-| `CPL_02T2` | `CLP` | `02T2` | `SEL 2414` | `10.9.24.110` | `TELNET` |
-
 ## Acessos rápidos
 
-- Frontend: http://localhost:5173
-- API/Documentação: http://localhost:8000/docs
+- **Interface Web:** http://localhost:5173
+- **Documentação Interativa da API (Swagger):** http://localhost:8000/docs
 
-## Comandos úteis
+## Dados de Teste & Mapeamento de Rede
 
-- **Logs:** `docker-compose logs -f`
-- **Derrubar o sistema:** `docker-compose down`
-- **Reiniciar backend:** `docker-compose restart backend`
+Para testar a importação de dados e o módulo de rede simulado:
 
-## Colaborando no projeto
-
-1. Clone o repositório: `git clone <url-do-repositorio>`
-2. Crie uma branch a partir da `main`:
-
-```bash
-   git checkout -b nome-da-branch
-```
-
-3. Faça suas alterações e commit seguindo o padrão:
-
-```bash
-   git add .
-   git commit -m "descrição curta do que foi feito"
-```
-
-4. Envie a branch: `git push origin nome-da-branch`
-5. Abra um Pull Request para a `main`
+1. Baixe o modelo da planilha: **[Modelo de Inventário](./samples/modelo_bd.xlsx)**
+2. Na interface web, utilize a opção **"Importar Inventário de IEDs"** no menu lateral.
+3. Para simular a coleta remota de dados por **FTP/Telnet**:
+   ```bash
+   pip install pyftpdlib telnetlib3
+   python mocks/server_mock.py
+   ```
 
 ## Estrutura do repositório
 
 ```
-├── backend/
-├── frontend/
-├── mocks/
-├── samples/
+├── backend/            # API FastAPI, schemas Pydantic, rotas e engines de validação
+├── frontend/           # Interface React (Vite) + TailwindCSS
+├── mocks/              # Servidores mock FTP e Telnet para testes de rede
+├── samples/            # Arquivos de exemplo da planilha para importação
 ├── docker-compose.yml
 └── .env.example
 ```
 
-## Roadmap
-
-### Funcionando
-
-[x] Extração e validação de parâmetros (Excel x TXT)  
-[x] Relatório de validação de parâmetros  
-[x] Extração e validação de arquivos .SCD  
-[x] Sistema de autenticação e gestão de históricos  
-[x] Refatoração do código  
-[x] Tela de formulário de subestação  
-[x] Visualização gráfica dos erros de validação  
-[X] Importação de dados de IEDs para busca em rede via interface
-
-### Em desenvolvimento
-
-[x] Módulo de rede FTP/Telnet (testes em ambiente real)  
-[X] Implementação de testes
+## Comandos Úteis
+- **Visualizar Logs:** `docker-compose logs -f`
+- **Reiniciar Backend:** `docker-compose restart backend`
+- **Parar aplicação:** `docker-compose down`
